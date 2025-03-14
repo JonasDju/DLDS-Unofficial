@@ -1,0 +1,553 @@
+minecraft:
+  story:
+    root:
+      points: 1
+      items:
+        RAW_IRON: 1
+    mine_stone:
+      points: 1
+      items:
+        RAW_IRON: 1
+    upgrade_tools:
+      points: 1
+      items:
+        RAW_IRON: 1
+    smelt_iron:
+      points: 1
+      items:
+        RAW_IRON: 1
+    obtain_armor:
+      points: 2
+      items:
+        IRON_INGOT: 2
+    lava_bucket:
+      points: 2
+      items:
+        IRON_INGOT: 2
+    iron_tools:
+      points: 2
+      items:
+        IRON_INGOT: 2
+    deflect_arrow:
+      points: 4
+      items:
+        LAPIS_LAZULI: 3
+    form_obsidian:
+      points: 4
+      items:
+        LAPIS_LAZULI: 3
+    mine_diamond:
+      points: 4
+      items:
+        LAPIS_LAZULI: 3
+    enter_the_nether:
+      points: 6
+      items:
+        DIAMOND: 3
+    shiny_gear:
+      points: 6
+      items:
+        DIAMOND: 3
+    enchant_item:
+      points: 6
+      items:
+        DIAMOND: 3
+    cure_zombie_villager:
+      points: 25
+      items:
+        GOLDEN_APPLE: 5
+      exp: 50
+    follow_ender_eye:
+      points: 10
+      items:
+        DIAMOND: 5
+      exp: 25
+    enter_the_end:
+      points: 25
+      potion: STRENGTH
+
+  nether:
+    return_to_sender:
+      points: 10
+      items:
+        DIAMOND: 3
+        ANCIENT_DEBRIS: 1
+    find_bastion:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        DIAMOND: 1
+    obtain_ancient_debris:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        DIAMOND: 1
+    fast_travel:
+      points: 20
+      items:
+        DIAMOND: 5
+        ANCIENT_DEBRIS: 1
+        NETHERITE_UPGRADE_SMITHING_TEMPLATE: 1
+    find_fortress:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        DIAMOND: 1
+    obtain_crying_obsidian:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        DIAMOND: 1
+    distract_piglin:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        ANCIENT_DEBRIS: 1
+    ride_strider:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        ANCIENT_DEBRIS: 1
+    uneasy_alliance:
+      points: 20
+      items:
+        DIAMOND: 5
+        ANCIENT_DEBRIS: 1
+        NETHERITE_UPGRADE_SMITHING_TEMPLATE: 1
+    loot_bastion:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        ANCIENT_DEBRIS: 1
+    use_lodestone:
+      points: 5
+      items:
+        RAW_GOLD: 3
+        ANCIENT_DEBRIS: 1
+    netherite_armor:
+      points: 20
+      items:
+        DIAMOND: 5
+        ANCIENT_DEBRIS: 1
+        NETHERITE_UPGRADE_SMITHING_TEMPLATE: 1
+    get_wither_skull:
+      points: 10
+      items:
+        ANCIENT_DEBRIS: 1
+        ENDER_PEARL: 2
+    obtain_blaze_rod:
+      points: 10
+      items:
+        ANCIENT_DEBRIS: 1
+        ENDER_PEARL: 2
+    charge_respawn_anchor:
+      points: 15
+      items:
+        ENDER_EYE: 2
+      exp: 25
+    ride_strider_in_overworld_lava:
+      points: 15
+      items:
+        ENDER_EYE: 2
+      exp: 25
+    explore_nether:
+      points: 20
+      items:
+        DIAMOND: 5
+        ANCIENT_DEBRIS: 1
+        NETHERITE_UPGRADE_SMITHING_TEMPLATE: 1
+    summon_wither:
+      points: 20
+      items:
+        GOLDEN_APPLE: 3
+      exp: 25
+    brew_potion:
+      points: 10
+      items:
+        ANCIENT_DEBRIS: 1
+        ENDER_PEARL: 2
+    create_beacon:
+      points: 15
+      items:
+        ENDER_EYE: 2
+      exp: 25
+    all_potions:
+      points: 50
+      items:
+        DIAMOND: 10
+        NETHERITE_INGOT: 2
+    create_full_beacon:
+      points: 25
+      potion: STRENGTH
+    all_effects:
+      points: 50
+      items:
+        DIAMOND: 10
+        NETHERITE_INGOT: 2
+
+  end:
+    kill_dragon:
+      points: 150
+      items:
+        TOTEM_OF_UNDYING: 1
+    dragon_egg:
+      points: 20
+      items:
+        NETHERITE_INGOT: 2
+      exp: 25
+    enter_end_gateway:
+      points: 5
+      potion: SLOW_FALLING
+      exp: 25
+    dragon_breath:
+      points: 20
+      bad_omen: 5
+    find_end_city:
+      points: 25
+      items:
+        ENDER_CHEST: 1
+      exp: 25
+    elytra:
+      points: 25
+      items:
+        GUNPOWDER: 25
+      exp: 25
+    levitate:
+      points: 25
+      items:
+        WIND_CHARGE: 16
+      exp: 25
+
+  adventure:
+    root:
+      points: 1
+      items:
+        RAW_IRON: 1
+    voluntary_exile:
+      points: 2
+      items:
+        EMERALD: 1
+    spyglass_at_parrot:
+      points: 2
+      items:
+        EMERALD: 1
+    kill_a_mob:
+      points: 1
+      items:
+        RAW_IRON: 1
+    read_power_from_chiseled_bookshelf:
+      points: 2
+      items:
+        EMERALD: 1
+    trade:
+      points: 1
+      items:
+        RAW_IRON: 1
+    trim_with_any_armor_pattern:
+      points: 2
+      items:
+        EMERALD: 1
+    honey_block_slide:
+      points: 2
+      items:
+        EMERALD: 1
+    ol_betsy:
+      points: 2
+      items:
+        EMERALD: 1
+    lightning_rod_with_villager_no_fire:
+      points: 5
+      book:
+        enchantment: fire_protection
+        level: 3
+    fall_from_world_height:
+      points: 25
+      book:
+        enchantment: depth_strider
+        level: 2
+    salvage_sherd:
+      points: 2
+      items:
+        EMERALD: 1
+    avoid_vibration:
+      points: 5
+      book:
+        enchantment: swift_sneak
+        level: 2
+    sleep_in_bed:
+      points: 1
+      items:
+        RAW_IRON: 1
+    hero_of_the_village:
+      points: 25
+      book:
+        enchantment: protection
+        level: 4
+    spyglass_at_ghast:
+      points: 5
+      book:
+        enchantment: blast_protection
+        level: 4
+    throw_trident:
+      points: 5
+      book:
+        enchantment: riptide
+        level: 2
+    kill_mob_near_sculk_catalyst:
+      points: 20
+      book:
+        enchantment: power
+        level: 3
+    shoot_arrow:
+      points: 2
+      items:
+        EMERALD: 1
+    kill_all_mobs:
+      points: 75
+      book:
+        enchantment: infinity
+        level: 1
+    totem_of_undying:
+      points: 10
+      book:
+        enchantment: mending
+        level: 1
+    summon_iron_golem:
+      points: 5
+      book:
+        enchantment: protection
+        level: 2
+    trade_at_world_height:
+      points: 10
+      book:
+        enchantment: feather_falling
+        level: 3
+    trim_with_all_exclusive_armor_patterns:
+      points: 25
+      book:
+        enchantment: projectile_protection
+        level: 4
+    two_birds_one_arrow:
+      points: 20
+      book:
+        enchantment: punch
+        level: 2
+    whos_the_pillager_now:
+      points: 5
+      book:
+        enchantment: looting
+        level: 2
+    arbalistic:
+      points: 50
+      book:
+        enchantment: quick_charge
+        level: 3
+    craft_decorated_pot_using_only_sherds:
+      points: 5
+      book:
+        enchantment: silk_touch
+        level: 3
+    play_jukebox_in_meadows:
+      points: 10
+      book:
+        enchantment: fortune
+        level: 1
+    walk_on_powder_snow_with_leather_boots:
+      points: 5
+      book:
+        enchantment: frost_walker
+        level: 1
+    spyglass_at_dragon:
+      points: 5
+      book:
+        enchantment: knockback
+        level: 1
+    very_very_frightening:
+      points: 10
+      book:
+        enchantment: loyalty
+        level: 2
+    sniper_duel:
+      points: 15
+      book:
+        enchantment: flame
+        level: 1
+    bullseye:
+      points: 20
+      book:
+        enchantment: multishot
+        level: 1
+    brush_armadillo:
+      points: 10
+      book:
+        enchantment: thorns
+        level: 2
+    minecraft_trials_edition:
+      points: 10
+      book:
+        enchantment: luck_of_the_sea
+        level: 2
+    crafters_crafting_crafters:
+      points: 10
+      book:
+        enchantment: efficiency
+        level: 3
+    lighten_up:
+      points: 10
+      book:
+        enchantment: smite
+        level: 3
+    who_needs_rockets:
+      points: 10
+      book:
+        enchantment: sweeping_edge
+        level: 2
+    under_lock_and_key:
+      points: 10
+      book:
+        enchantment: fire_aspect
+        level: 1
+    blowback:
+      points: 20
+      book:
+        enchantment: wind_burst
+        level: 3
+    overoverkill:
+      points: 20
+      book:
+        enchantment: impaling
+        level: 4
+    revaulting:
+      points: 20
+      book:
+        enchantment: sharpness
+        level: 4
+
+  husbandry:
+    root:
+      points: 1
+      items:
+        POTATO: 3
+    safely_harvest_honey:
+      points: 2
+      items:
+        BREAD: 3
+    breed_an_animal:
+      points: 1
+      items:
+        POTATO: 3
+    allay_deliver_item_to_player:
+      points: 5
+      items:
+        GLISTERING_MELON_SLICE: 3
+    ride_a_boat_with_a_goat:
+      points: 5
+      items:
+        GLISTERING_MELON_SLICE: 3
+    tame_an_animal:
+      points: 1
+      items:
+        POTATO: 3
+    make_a_sign_glow:
+      points: 2
+      items:
+        BREAD: 3
+    fishy_business:
+      points: 1
+      items:
+        POTATO: 3
+    silk_touch_nest:
+      points: 5
+      items:
+        GLISTERING_MELON_SLICE: 3
+    tadpole_in_a_bucket:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    obtain_sniffer_egg:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    plant_seed:
+      points: 1
+      items:
+        POTATO: 3
+    wax_on:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    breed_all_animals:
+      points: 75
+      items:
+        GOLDEN_APPLE: 10
+    allay_deliver_cake_to_noteblock:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    complete_catalogue:
+      points: 50
+      items:
+        GOLDEN_APPLE: 4
+    tactical_fishing:
+      points: 1
+      items:
+        POTATO: 3
+    leash_all_frog_variants:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    feed_snifflet:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    balanced_diet:
+      points: 75
+      items:
+        GOLDEN_APPLE: 10
+    obtain_netherite_hoe:
+      points: 15
+      items:
+        GOLDEN_APPLE: 1
+    wax_off:
+      points: 5
+      items:
+        GLISTERING_MELON_SLICE: 3
+    axolotl_in_a_bucket:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    froglights:
+      points: 25
+      items:
+        GOLDEN_APPLE: 2
+    plant_any_sniffer_seed:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    kill_axolotl_target:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    remove_wolf_armor:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
+    whole_pack:
+      points: 50
+      items:
+        GOLDEN_APPLE: 4
+    repair_wolf_armor:
+      points: 10
+      items:
+        GOLDEN_CARROT: 5
+        ENDER_PEARL: 1
