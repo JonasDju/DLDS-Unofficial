@@ -82,7 +82,7 @@ public class GameManager implements Listener {
         // Set difficulty
         Difficulty difficulty = Difficulty.valueOf(plugin.getConfig().getString("difficulty"));
         for(World world : plugin.getServer().getWorlds()) {
-            world.setDifficulty(difficulty);v
+            world.setDifficulty(difficulty);
         }
 
         // Set time
