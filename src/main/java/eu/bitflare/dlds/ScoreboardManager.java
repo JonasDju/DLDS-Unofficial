@@ -26,7 +26,7 @@ public class ScoreboardManager implements Listener {
         this.plugin = plugin;
 
         // Start repeating task to update boards
-        plugin.getServer().getScheduler().runTaskTimer(plugin, this::updateBoards, 0, 20*30);
+        plugin.getServer().getScheduler().runTaskTimer(plugin, this::updateBoards, 0, 20);
 
 
     }
@@ -44,10 +44,12 @@ public class ScoreboardManager implements Listener {
         int currentAdvancements = plugin.getGameManager().getCurrentAdvancementAmount();
         int maxAdvancements = plugin.getGameManager().getMaxAdvancementAmount();
 
+        UUID playerId = board.getPlayer().getUniqueId();
+        long remainingTime = plugin.getGameManager().getPlayers().get(playerId).getRemainingTime();
 
         board.updateLines(
                 Component.text("Remaining Time").color(DLDSColor.LIGHT_GREY),
-                Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(Component.text("Coming soon", DLDSColor.YELLOW)),
+                Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(Component.text(formatTime(remainingTime), DLDSColor.YELLOW)),
                 Component.text(""),
                 Component.text("Points").color(DLDSColor.LIGHT_GREY),
                 Component.text(" » ", DLDSColor.LIGHT_GREY).append(Component.text(currentPoints, DLDSColor.YELLOW))
@@ -61,6 +63,16 @@ public class ScoreboardManager implements Listener {
                         .append(Component.text(maxAdvancements, DLDSColor.YELLOW))
                         .build()
         );
+    }
+
+    private String formatTime(long remainingTime) {
+        long hours = remainingTime / 3600;
+        long minutes = (remainingTime % 3600) / 60;
+        long seconds = remainingTime % 60;
+        boolean isNegative = (hours < 0 || minutes < 0 || seconds < 0);
+
+        return (isNegative ? "-" : "") + String.format("%02d:%02d:%02d",
+                Math.abs(hours), Math.abs(minutes), Math.abs(seconds));
     }
 
     public void createBoardForPlayers(Player... players){

@@ -1,5 +1,6 @@
 package eu.bitflare.dlds;
 
+import com.mojang.brigadier.Command;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -107,7 +108,6 @@ public class GameManager implements Listener {
                     }
                     countdown--;
                 } else {
-                    //TODO: Start player timers
                     teleportPlayersRandomly();
                     removeAllAdvancements();
 
@@ -123,6 +123,60 @@ public class GameManager implements Listener {
                             player.setFoodLevel(20);
                         }
                     }
+
+                    //Start player timers
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            for(PlayerData playerData : players.values()) {
+                                Player player = plugin.getServer().getPlayer(playerData.getUuid());
+                                if (player != null && player.isOnline()) {
+                                    // Ignore if game is not running
+                                    if(!isGameRunning) {
+                                        return;
+                                    }
+
+                                    long remainingTime = playerData.getRemainingTime();
+                                    if(remainingTime > 0 || playerData.isDead()){
+                                        playerData.setRemainingTime(remainingTime - 1);
+                                    } else {
+                                        plugin.getLogger().info(player.getName() + " has no time left and is kicked");
+                                        player.sendMessage("Your time is up!");
+
+                                        int currentPoints = getCurrentPoints();
+                                        int maxPoints = getMaxPoints();
+
+                                        int currentAdvancements = getCurrentAdvancementAmount();
+                                        int maxAdvancements = getMaxAdvancementAmount();
+
+                                        //set Player to Dead to deactive time up message after relog
+                                        playerData.setDead(true);
+
+                                        player.kick(
+                                                Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD))
+                                                        .appendNewline().appendNewline().append(
+                                                        Component.text("Your ").color(DLDSColor.LIGHT_GREY).append(
+                                                                Component.text("Time ").color(DLDSColor.BLUE)
+                                                        ).append(Component.text("is up!"))
+                                                ).appendNewline().appendNewline().append(
+                                                        Component.text("Points: ").color(DLDSColor.LIGHT_GREY).append(
+                                                                Component.text(currentPoints, DLDSColor.YELLOW))
+                                                                .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                                                                .append(Component.text(maxPoints, DLDSColor.YELLOW)
+                                                                )
+                                                ).appendNewline().append(
+                                                        Component.text("Advancements: ").color(DLDSColor.LIGHT_GREY).append(
+                                                                Component.text(currentAdvancements, DLDSColor.YELLOW))
+                                                                .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                                                                .append(Component.text(maxAdvancements, DLDSColor.YELLOW)
+                                                                )
+                                                )
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }.runTaskTimer(plugin, 0L, 20L);
 
                     cancel();
                 }
@@ -555,4 +609,14 @@ public class GameManager implements Listener {
         return 118*players.size();
     }
 
+    public boolean setTimeForPlayer(String playerName, int hours, int minutes, int seconds) {
+        for (PlayerData playerData : players.values()) {
+            if (playerData.getPlayerName().equalsIgnoreCase(playerName)) {
+                long totalSeconds = (hours * 3600L) + (minutes * 60L) + seconds;
+                playerData.setRemainingTime(totalSeconds);
+                return true;
+            }
+        }
+        return false;
+    }
 }
