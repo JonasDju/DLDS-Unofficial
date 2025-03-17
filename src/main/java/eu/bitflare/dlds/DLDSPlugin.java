@@ -181,7 +181,7 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
             }
         }, 0L, 1L);
 
-
+        gameManager.startTimers();
     }
 
     @Override
