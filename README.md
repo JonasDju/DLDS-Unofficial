@@ -17,9 +17,9 @@ The plugin currently contains most of the core mechanics of the event but is ver
 - Permadeath (can be turned off)
 - Customization (see below)
 - Time measurement (also the ability to change the time during a game)
+- Automatic Ender Dragon respawn after 10 minutes
 
 The following features are currently missing / need work:
-- Automatic Ender Dragon respawn (you'll get 4 end crystals as compensation instead)
 - Polishing (Colorful text, Soundeffects, ...)
 - Multiple teams on one server
 
