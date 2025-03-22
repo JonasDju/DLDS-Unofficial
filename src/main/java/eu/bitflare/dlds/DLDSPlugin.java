@@ -2,6 +2,8 @@ package eu.bitflare.dlds;
 
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
@@ -61,6 +63,31 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                         }
                         return Command.SINGLE_SUCCESS;
                     }))
+            .then(Commands.literal("time")
+                    .then(Commands.literal("set")
+                            .then(Commands.argument("player", StringArgumentType.string())
+                                    .then(Commands.argument("hours", IntegerArgumentType.integer(0, 23))
+                                            .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 59))
+                                                    .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 59))
+                                                            .executes(ctx -> {
+                                                                String playerName = StringArgumentType.getString(ctx, "player");
+                                                                int hours = IntegerArgumentType.getInteger(ctx, "hours");
+                                                                int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
+                                                                int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
+
+                                                                if (gameManager.setTimeForPlayer(playerName, hours, minutes, seconds)) {
+                                                                    ctx.getSource().getSender().sendPlainMessage("Time set for player " + playerName + " to " + hours + ":" + minutes + ":" + seconds);
+                                                                    return Command.SINGLE_SUCCESS;
+                                                                }
+                                                                ctx.getSource().getSender().sendPlainMessage("Error: Player not found!");
+                                                                return Command.SINGLE_SUCCESS;
+                                                            })
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            )
             .executes(ctx -> {
                 ctx.getSource().getSender().sendPlainMessage("DLDS Help:\n- /dlds enter\n- /dlds start\n- /dlds stop");
                 return Command.SINGLE_SUCCESS;
@@ -154,7 +181,7 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
             }
         }, 0L, 1L);
 
-
+        gameManager.startTimers();
     }
 
     @Override

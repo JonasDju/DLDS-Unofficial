@@ -9,13 +9,11 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
-import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Block;
+import org.bukkit.boss.DragonBattle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EnderDragon;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -107,7 +105,6 @@ public class GameManager implements Listener {
                     }
                     countdown--;
                 } else {
-                    //TODO: Start player timers
                     teleportPlayersRandomly();
                     removeAllAdvancements();
 
@@ -124,12 +121,70 @@ public class GameManager implements Listener {
                         }
                     }
 
-                    cancel();
+                    //Start player timers
+                    startTimers();
+
+                    //cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
 
         return true;
+    }
+
+    public void startTimers() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for(PlayerData playerData : players.values()) {
+                    Player player = plugin.getServer().getPlayer(playerData.getUuid());
+                    if (player != null && player.isOnline()) {
+                        // Ignore if game is not running
+                        if(!isGameRunning) {
+                            return;
+                        }
+
+                        long remainingTime = playerData.getRemainingTime();
+                        if(remainingTime > 0 || playerData.isDead()){
+                            playerData.setRemainingTime(remainingTime - 1);
+                        } else {
+                            plugin.getLogger().info(player.getName() + " has no time left and is kicked");
+                            player.sendMessage("Your time is up!");
+
+                            int currentPoints = getCurrentPoints();
+                            int maxPoints = getMaxPoints();
+
+                            int currentAdvancements = getCurrentAdvancementAmount();
+                            int maxAdvancements = getMaxAdvancementAmount();
+
+                            //set Player to Dead to deactive time up message after relog
+                            playerData.setDead(true);
+
+                            player.kick(
+                                    Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD))
+                                            .appendNewline().appendNewline().append(
+                                                    Component.text("Your ").color(DLDSColor.LIGHT_GREY).append(
+                                                            Component.text("Time ").color(DLDSColor.BLUE)
+                                                    ).append(Component.text("is up!"))
+                                            ).appendNewline().appendNewline().append(
+                                                    Component.text("Points: ").color(DLDSColor.LIGHT_GREY).append(
+                                                                    Component.text(currentPoints, DLDSColor.YELLOW))
+                                                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                                                            .append(Component.text(maxPoints, DLDSColor.YELLOW)
+                                                            )
+                                            ).appendNewline().append(
+                                                    Component.text("Advancements: ").color(DLDSColor.LIGHT_GREY).append(
+                                                                    Component.text(currentAdvancements, DLDSColor.YELLOW))
+                                                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                                                            .append(Component.text(maxAdvancements, DLDSColor.YELLOW)
+                                                            )
+                                            )
+                            );
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
     }
 
     public boolean stopGame() {
@@ -222,16 +277,41 @@ public class GameManager implements Listener {
             return;
         }
 
-        Entity source = event.getDamageSource().getCausingEntity();
-        ItemStack reward = new ItemStack(Material.END_CRYSTAL, 4);
-        if(source instanceof Player player) {
-            player.sendPlainMessage("Since Ender Drake respawn is currently not implemented, you receive 4 end cystrals to respawn it yourself.");
-            awardItems(player, reward);
-        } else {
-            Bukkit.broadcast(Component.text("Since Ender Drake respawn is currently not implemented, you receive 4 end cystrals to respawn it yourself."));
-            event.getEntity().getWorld().dropItem(event.getEntity().getLocation(), reward);
-        }
+        Bukkit.getConsoleSender().sendMessage("Enderdragon has been killed! Next spawn in 10 minutes.");
+        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnEndCrystals(event), 12000L);
+    }
 
+    private void spawnEndCrystals(EntityDeathEvent event) {
+        World mainWorld = Bukkit.getWorlds().getFirst();
+        String endWorldName = mainWorld.getName() + "_the_end";
+        World endWorld = Bukkit.getWorld(endWorldName);
+
+        final DragonBattle dragonBattle;
+        if (endWorld != null) {
+            dragonBattle = endWorld.getEnderDragonBattle();
+            final Location endPortalLoc;
+            if (dragonBattle != null) {
+                endPortalLoc = dragonBattle.getEndPortalLocation();
+                endWorld.spawnEntity(endPortalLoc.clone().add(3.5d, 1, 0.5), EntityType.END_CRYSTAL);
+                endWorld.spawnEntity(endPortalLoc.clone().add(-2.5d, 1, 0.5), EntityType.END_CRYSTAL);
+                endWorld.spawnEntity(endPortalLoc.clone().add(0.5, 1, 3.5d), EntityType.END_CRYSTAL);
+                endWorld.spawnEntity(endPortalLoc.clone().add(0.5, 1, -2.5d), EntityType.END_CRYSTAL);
+                dragonBattle.initiateRespawn();
+
+                for (int x = -2; x <= 2; x++) {
+                    for (int z = -2; z <= 2; z++) {
+                        Location blockLocation = new Location(endWorld, endPortalLoc.getX() + x, endPortalLoc.getY(), endPortalLoc.getZ() + z);
+
+                        if ((x == 0 && z == 0) || (Math.abs(x) == 2 && Math.abs(z) == 2)) {
+                            continue;
+                        }
+
+                        Block block = blockLocation.getBlock();
+                        block.setType(Material.END_PORTAL);
+                    }
+                }
+            }
+        }
     }
 
     @EventHandler
@@ -555,4 +635,14 @@ public class GameManager implements Listener {
         return 118*players.size();
     }
 
+    public boolean setTimeForPlayer(String playerName, int hours, int minutes, int seconds) {
+        for (PlayerData playerData : players.values()) {
+            if (playerData.getPlayerName().equalsIgnoreCase(playerName)) {
+                long totalSeconds = (hours * 3600L) + (minutes * 60L) + seconds;
+                playerData.setRemainingTime(totalSeconds);
+                return true;
+            }
+        }
+        return false;
+    }
 }

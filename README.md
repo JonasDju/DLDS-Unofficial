@@ -16,10 +16,10 @@ The plugin currently contains most of the core mechanics of the event but is ver
 - Automatically adjusting all required settings (gamemode, difficulty, world border, player spawn)
 - Permadeath (can be turned off)
 - Customization (see below)
+- Time measurement (also the ability to change the time during a game)
+- Automatic Ender Dragon respawn after 10 minutes
 
 The following features are currently missing / need work:
-- Automatic Ender Dragon respawn (you'll get 4 end crystals as compensation instead)
-- Time measurement
 - Polishing (Colorful text, Soundeffects, ...)
 - Multiple teams on one server
 
@@ -35,9 +35,10 @@ The file `gamestate.json` only exists when a game of DLDS is currently running (
 After modifying the files, restart the server to apply your changes.
 
 ## Usage
-The plugin offers three commands to control the game:
+The plugin offers four commands to control the game:
 - `/dlds enter`
 - `/dlds start`
 - `/dlds stop`
+- `/dlds time set playername hours minutes seconds`
 
 Every player who wants to participate in the game must execute the `/dlds enter` command to register for the event. **You are not able to add more players after the event has started**. Once every player has entered, use the `/dlds start` command to start the round. If you want to stop the current round, use `/dlds stop`. **Careful: This will immediately reset your progress and remove the scoreboard. You will not be able to restore the game state.**
