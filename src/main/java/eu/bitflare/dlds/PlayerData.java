@@ -1,7 +1,6 @@
 package eu.bitflare.dlds;
 
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Player;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -3,8 +3,6 @@ package eu.bitflare.dlds;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
@@ -294,11 +292,6 @@ public class GameManager implements Listener {
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
         PlayerData playerData = players.get(event.getPlayerProfile().getId());
-
-        // Ignore if permadeath is off
-        if(!plugin.getConfig().getBoolean("permadeath")) {
-            return;
-        }
 
         // Ignore OP player
         if(Bukkit.getServer().getOperators().stream().map(OfflinePlayer::getUniqueId).toList().contains(event.getPlayerProfile().getId())){
