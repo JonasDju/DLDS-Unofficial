@@ -35,12 +35,13 @@ public class GameManager implements Listener {
     private final DLDSPlugin plugin;
     private Map<UUID, PlayerData> players;
     private boolean isGameRunning;
-
+    private boolean isTimerRunning;
 
     public GameManager(DLDSPlugin plugin) {
         this.plugin = plugin;
         this.players = new HashMap<>();
         this.isGameRunning = false;
+        this.isTimerRunning = false;
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -120,11 +121,7 @@ public class GameManager implements Listener {
                             player.setFoodLevel(20);
                         }
                     }
-
-                    //Start player timers
-                    startTimers();
-
-                    //cancel();
+                    cancel();
                 }
             }
         }.runTaskTimer(plugin, 0L, 20L);
@@ -133,23 +130,19 @@ public class GameManager implements Listener {
     }
 
     public void startTimers() {
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                for(PlayerData playerData : players.values()) {
+        if(isTimerRunning) {
+            return;
+        }
+        isTimerRunning = true;
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+
+            if(isGameRunning) {
+                for (PlayerData playerData : players.values()) {
                     Player player = plugin.getServer().getPlayer(playerData.getUuid());
                     if (player != null && player.isOnline()) {
-                        // Ignore if game is not running
-                        if(!isGameRunning) {
-                            return;
-                        }
 
-                        long remainingTime = playerData.getRemainingTime();
-                        if(remainingTime > 0 || playerData.isDead()){
-                            playerData.setRemainingTime(remainingTime - 1);
-                        } else {
+                        if(playerData.getRemainingTime() == 0L && plugin.getConfig().getBoolean("timeout-kick")) {
                             plugin.getLogger().info(player.getName() + " has no time left and is kicked");
-                            player.sendMessage("Your time is up!");
 
                             int currentPoints = getCurrentPoints();
                             int maxPoints = getMaxPoints();
@@ -157,34 +150,18 @@ public class GameManager implements Listener {
                             int currentAdvancements = getCurrentAdvancementAmount();
                             int maxAdvancements = getMaxAdvancementAmount();
 
-                            //set Player to Dead to deactive time up message after relog
-                            playerData.setDead(true);
-
                             player.kick(
-                                    Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD))
-                                            .appendNewline().appendNewline().append(
-                                                    Component.text("Your ").color(DLDSColor.LIGHT_GREY).append(
-                                                            Component.text("Time ").color(DLDSColor.BLUE)
-                                                    ).append(Component.text("is up!"))
-                                            ).appendNewline().appendNewline().append(
-                                                    Component.text("Points: ").color(DLDSColor.LIGHT_GREY).append(
-                                                                    Component.text(currentPoints, DLDSColor.YELLOW))
-                                                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                                            .append(Component.text(maxPoints, DLDSColor.YELLOW)
-                                                            )
-                                            ).appendNewline().append(
-                                                    Component.text("Advancements: ").color(DLDSColor.LIGHT_GREY).append(
-                                                                    Component.text(currentAdvancements, DLDSColor.YELLOW))
-                                                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                                            .append(Component.text(maxAdvancements, DLDSColor.YELLOW)
-                                                            )
-                                            )
+                                    DLDSComponents.getPlayerTimeoutKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
                             );
                         }
+
+                        long remainingTime = playerData.getRemainingTime();
+                        playerData.setRemainingTime(remainingTime - 1);
+
                     }
                 }
             }
-        }.runTaskTimer(plugin, 0L, 20L);
+        }, 0L, 20L);
     }
 
     public boolean stopGame() {
@@ -278,7 +255,7 @@ public class GameManager implements Listener {
         }
 
         Bukkit.getConsoleSender().sendMessage("Enderdragon has been killed! Next spawn in 10 minutes.");
-        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnEndCrystals(event), 12000L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnEndCrystals(event), 20L * 60L * 10L);
     }
 
     private void spawnEndCrystals(EntityDeathEvent event) {
@@ -339,27 +316,15 @@ public class GameManager implements Listener {
         int currentAdvancements = getCurrentAdvancementAmount();
         int maxAdvancements = getMaxAdvancementAmount();
 
-        event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD))
-                        .appendNewline().appendNewline().append(
-                                Component.text("You ").color(DLDSColor.LIGHT_GREY).append(
-                                        Component.text("died").color(DLDSColor.RED)
-                                ).append(Component.text("!"))
-                        ).appendNewline().appendNewline().append(
-                                Component.text("Points: ").color(DLDSColor.LIGHT_GREY).append(
-                                                Component.text(currentPoints, DLDSColor.YELLOW))
-                                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                        .append(Component.text(maxPoints, DLDSColor.YELLOW)
-                                        )
-                        ).appendNewline().append(
-                                Component.text("Advancements: ").color(DLDSColor.LIGHT_GREY).append(
-                                                Component.text(currentAdvancements, DLDSColor.YELLOW))
-                                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                        .append(Component.text(maxAdvancements, DLDSColor.YELLOW)
-                                        )
-                        )
-                );
-
+        if(playerData.getRemainingTime() <= 0L && plugin.getConfig().getBoolean("timeout-kick")){
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                    DLDSComponents.getPlayerTimeoutKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
+            );
+        } else if(playerData.isDead() && plugin.getConfig().getBoolean("permadeath")) {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                    DLDSComponents.getPlayerDeathKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
+            );
+        }
     }
 
     @EventHandler
@@ -385,24 +350,7 @@ public class GameManager implements Listener {
 
         playerData.setDead(true);
         player.kick(
-                Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD))
-                        .appendNewline().appendNewline().append(
-                                Component.text("You ").color(DLDSColor.LIGHT_GREY).append(
-                                        Component.text("died").color(DLDSColor.RED)
-                                ).append(Component.text("!"))
-                        ).appendNewline().appendNewline().append(
-                                Component.text("Points: ").color(DLDSColor.LIGHT_GREY).append(
-                                        Component.text(currentPoints, DLDSColor.YELLOW))
-                                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                        .append(Component.text(maxPoints, DLDSColor.YELLOW)
-                                )
-                        ).appendNewline().append(
-                                Component.text("Advancements: ").color(DLDSColor.LIGHT_GREY).append(
-                                                Component.text(currentAdvancements, DLDSColor.YELLOW))
-                                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                                        .append(Component.text(maxAdvancements, DLDSColor.YELLOW)
-                                        )
-                        )
+                DLDSComponents.getPlayerDeathKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
         );
     }
 

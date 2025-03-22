@@ -1,3 +1,4 @@
 permadeath: true
 difficulty: HARD
 worldborder: 10000
+timeout-kick: true

@@ -2,9 +2,6 @@ package eu.bitflare.dlds;
 
 import fr.mrmicky.fastboard.adventure.FastBoard;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -49,7 +46,7 @@ public class ScoreboardManager implements Listener {
 
         board.updateLines(
                 Component.text("Remaining Time").color(DLDSColor.LIGHT_GREY),
-                Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(Component.text(formatTime(remainingTime), DLDSColor.YELLOW)),
+                Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(DLDSComponents.formatTime(remainingTime)),
                 Component.text(""),
                 Component.text("Points").color(DLDSColor.LIGHT_GREY),
                 Component.text(" » ", DLDSColor.LIGHT_GREY).append(Component.text(currentPoints, DLDSColor.YELLOW))
@@ -65,20 +62,10 @@ public class ScoreboardManager implements Listener {
         );
     }
 
-    private String formatTime(long remainingTime) {
-        long hours = remainingTime / 3600;
-        long minutes = (remainingTime % 3600) / 60;
-        long seconds = remainingTime % 60;
-        boolean isNegative = (hours < 0 || minutes < 0 || seconds < 0);
-
-        return (isNegative ? "-" : "") + String.format("%02d:%02d:%02d",
-                Math.abs(hours), Math.abs(minutes), Math.abs(seconds));
-    }
-
     public void createBoardForPlayers(Player... players){
         for(Player player : players){
             FastBoard board = new FastBoard(player);
-            board.updateTitle(Component.text("Unofficial DLDS").style(Style.style(DLDSColor.DARK_GREEN, TextDecoration.BOLD)));
+            board.updateTitle(DLDSComponents.scoreboardHeader);
             updateBoard(board);
             boards.put(player.getUniqueId(), board);
         }
