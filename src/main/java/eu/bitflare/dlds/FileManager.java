@@ -30,7 +30,8 @@ public class FileManager {
 
             GameState state = new GameState(
                     plugin.getGameManager().getPlayers(),
-                    plugin.getGameManager().isGameRunning()
+                    plugin.getGameManager().isGameRunning(),
+                    plugin.getGameManager().getDragonRespawnTime()
             );
 
             FileWriter writer = new FileWriter(saveFile);
@@ -51,8 +52,11 @@ public class FileManager {
             GameState state = gson.fromJson(reader, GameState.class);
             reader.close();
 
+            long dragonRespawnTime = state.getDragonRespawnTime();
+
             plugin.getGameManager().setGameRunning(state.isGameRunning());
             plugin.getGameManager().setPlayers(state.getRegisteredPlayers());
+            plugin.getGameManager().setDragonRespawnTime(dragonRespawnTime == 0 ? Long.MAX_VALUE : dragonRespawnTime);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -62,10 +66,12 @@ public class FileManager {
 
         private final Map<UUID, PlayerData> registeredPlayers;
         private final boolean isGameRunning;
+        private final long dragonRespawnTime;
 
-        public GameState(Map<UUID, PlayerData> registeredPlayers, boolean isGameRunning) {
+        public GameState(Map<UUID, PlayerData> registeredPlayers, boolean isGameRunning, long dragonRespawnTime) {
             this.registeredPlayers = registeredPlayers;
             this.isGameRunning = isGameRunning;
+            this.dragonRespawnTime = dragonRespawnTime;
         }
 
         public Map<UUID, PlayerData> getRegisteredPlayers() {
@@ -74,6 +80,10 @@ public class FileManager {
 
         public boolean isGameRunning() {
             return isGameRunning;
+        }
+
+        public long getDragonRespawnTime() {
+            return dragonRespawnTime;
         }
 
     }

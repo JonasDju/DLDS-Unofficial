@@ -1,4 +1,32 @@
+# Permadeath: Once a player dies, he will be kicked from the server and not allowed to rejoin.
+# Default: true
+# Valid options: true, false
+# If you want to disable permadeath, choose false instead of true. This will make Minecraft behave normally in case of a players death.
+# Note: No matter what is chosen here, players with OP-permissions can always join the server (anti-lockout).
 permadeath: true
+
+# Difficulty: The game difficulty that is set once the game starts.
+# Default: HARD
+# Valid options: PEACEFUL, EASY, NORMAL, HARD
 difficulty: HARD
+
+# Worldborder: The size of the worldborder that is created once the game starts
+# Default: 10000
+# If you want to disable the world border, choose a value of zero.
 worldborder: 10000
-timeout-kick: true
+
+# Timeout Kick: Once the time of a player runs out, he will be kicked from the server and not allowed to rejoin.
+# Default: true
+# Valid options: true, false
+# If you want to disable this feature, choose false instead of true. This will result in the plugin still tracking a players ingame time, but not kicking him once the time it up.
+# Note: No matter what is chosen here, players with OP-permissions can always join the server (anti-lockout).
+timeout_kick: true
+
+# Playtime: Time in seconds each player has to get as many points as possible. After the time is up, the player may get kicked (see "Timeout Kick" setting above).
+# Default: 43200 (equals to 12 hours)
+# Note: If you don't want to have a time limit, change the setting "timeout_kick" to false instead of changing this number. This will allow you to play for as long as you want.
+playtime: 43200
+
+# Dragon Respawn Delay: Time in minutes that is waited before respawning the Ender Dragon
+# Default: 10
+dragon_respawn_delay: 10

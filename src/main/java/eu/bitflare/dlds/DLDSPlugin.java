@@ -113,6 +113,12 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
         loadRewards();
         fileManager.loadGameState();
 
+        // Respawn ender dragon if server was offline during respawn time
+        if(gameManager.getDragonRespawnTime() < System.currentTimeMillis()) {
+            gameManager.respawnEnderDragon();
+        }
+
+        // Custom day/night cycle
         World overworld = getServer().getWorlds().getFirst();
         overworld.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
 

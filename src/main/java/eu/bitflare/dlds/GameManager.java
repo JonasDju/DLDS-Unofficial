@@ -34,12 +34,14 @@ public class GameManager implements Listener {
     private Map<UUID, PlayerData> players;
     private boolean isGameRunning;
     private boolean isTimerRunning;
+    private long dragonRespawnTime;
 
     public GameManager(DLDSPlugin plugin) {
         this.plugin = plugin;
         this.players = new HashMap<>();
         this.isGameRunning = false;
         this.isTimerRunning = false;
+        this.dragonRespawnTime = Long.MAX_VALUE;
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
@@ -110,6 +112,9 @@ public class GameManager implements Listener {
                     // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP
                     for(PlayerData playerData : players.values()) {
                         Player player = plugin.getServer().getPlayer(playerData.getUuid());
+
+                        playerData.setRemainingTime(plugin.getConfig().getLong("playtime"));
+
                         if(player != null) {
                             plugin.getScoreboardManager().createBoardForPlayers(player);
                             player.getInventory().clear();
@@ -139,8 +144,8 @@ public class GameManager implements Listener {
                     Player player = plugin.getServer().getPlayer(playerData.getUuid());
                     if (player != null && player.isOnline()) {
 
-                        if(playerData.getRemainingTime() == 0L && plugin.getConfig().getBoolean("timeout-kick")) {
-                            plugin.getLogger().info(player.getName() + " has no time left and is kicked");
+                        if(playerData.getRemainingTime() == 0L && plugin.getConfig().getBoolean("timeout_kick")) {
+                            plugin.getComponentLogger().info("{} has no time left and is kicked", player.getName());
 
                             int currentPoints = getCurrentPoints();
                             int maxPoints = getMaxPoints();
@@ -167,6 +172,10 @@ public class GameManager implements Listener {
             return false;
         }
         isGameRunning = false;
+
+        // Reset world border
+        World overworld = plugin.getServer().getWorlds().getFirst();
+        overworld.getWorldBorder().reset();
 
         Bukkit.broadcast(Component.text("DLDS has been stopped!"));
 
@@ -214,7 +223,6 @@ public class GameManager implements Listener {
         // Read rewards from configuration file
         ConfigurationSection rewardSection = getRewardsSection(advancement);
         if(rewardSection == null) {
-            plugin.getComponentLogger().info(advancementKey.asString());
             plugin.getComponentLogger().info("Player {} just received the advancement {} ({}), but there exists no reward section for it in the rewards.yml file!",
                     player.displayName(), advancement.getDisplay().title(), advancement.getKey().asString());
             return;
@@ -252,11 +260,38 @@ public class GameManager implements Listener {
             return;
         }
 
-        Bukkit.getConsoleSender().sendMessage("Enderdragon has been killed! Next spawn in 10 minutes.");
-        Bukkit.getScheduler().runTaskLater(plugin, () -> spawnEndCrystals(event), 20L * 60L * 10L);
+        event.setDroppedExp(12000);
+
+        long dragonRespawnDelay = plugin.getConfig().getLong("dragon_respawn_delay");
+        plugin.getComponentLogger().info("Ender Dragon has been killed! Next spawn in {} minutes.", dragonRespawnDelay);
+        Bukkit.getScheduler().runTaskLater(plugin, this::respawnEnderDragon, 20L * 60L * dragonRespawnDelay);
+        Bukkit.getScheduler().runTaskLater(plugin, this::spawnDragonEgg, 20L * 15L);
+
+        this.dragonRespawnTime = dragonRespawnDelay * 60L * 1000L + System.currentTimeMillis();
     }
 
-    private void spawnEndCrystals(EntityDeathEvent event) {
+    private void spawnDragonEgg() {
+        World mainWorld = Bukkit.getWorlds().getFirst();
+        World endWorld = Bukkit.getWorld(mainWorld.getName() + "_the_end");
+
+        if(endWorld != null) {
+            DragonBattle battle = endWorld.getEnderDragonBattle();
+            if(battle != null) {
+                Location endPortalLocation = battle.getEndPortalLocation();
+                if(endPortalLocation != null) {
+                    Block topBlock = endPortalLocation.clone().add(0, 4, 0).getBlock();
+                    if(topBlock.getType() != Material.DRAGON_EGG) {
+                        topBlock.setType(Material.DRAGON_EGG);
+                    }
+                }
+            }
+        }
+
+    }
+
+    public void respawnEnderDragon() {
+        plugin.getComponentLogger().info("Respawning Ender Dragon!");
+
         World mainWorld = Bukkit.getWorlds().getFirst();
         String endWorldName = mainWorld.getName() + "_the_end";
         World endWorld = Bukkit.getWorld(endWorldName);
@@ -286,7 +321,22 @@ public class GameManager implements Listener {
                     }
                 }
             }
+
+            new BukkitRunnable() {
+                public void run() {
+                    EnderDragon dragon = dragonBattle.getEnderDragon();
+
+                    if (dragon != null) {
+                        plugin.getComponentLogger().info("Ender Dragon respawned successfully!");
+                        dragonRespawnTime = Long.MAX_VALUE;
+                        cancel();
+                    }
+                }
+            }.runTaskTimer(plugin, 0L, 20L);
         }
+
+
+
     }
 
     @EventHandler
@@ -309,7 +359,7 @@ public class GameManager implements Listener {
         int currentAdvancements = getCurrentAdvancementAmount();
         int maxAdvancements = getMaxAdvancementAmount();
 
-        if(playerData.getRemainingTime() <= 0L && plugin.getConfig().getBoolean("timeout-kick")){
+        if(playerData.getRemainingTime() <= 0L && plugin.getConfig().getBoolean("timeout_kick")){
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
                     DLDSComponents.getPlayerTimeoutKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
             );
@@ -574,6 +624,14 @@ public class GameManager implements Listener {
     public int getMaxAdvancementAmount() {
         //TODO: replace hardcoded value
         return 118*players.size();
+    }
+
+    public long getDragonRespawnTime() {
+        return dragonRespawnTime;
+    }
+
+    public void setDragonRespawnTime(long dragonRespawnTime) {
+        this.dragonRespawnTime = dragonRespawnTime;
     }
 
     public boolean setTimeForPlayer(String playerName, int hours, int minutes, int seconds) {
