@@ -108,6 +108,8 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
         });
 
         saveDefaultConfig();
+        getConfig().options().copyDefaults(true);
+        saveConfig();
 
         Bukkit.getPluginManager().registerEvents(this, this);
         loadRewards();
