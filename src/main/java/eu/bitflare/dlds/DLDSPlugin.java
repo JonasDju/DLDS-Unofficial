@@ -116,6 +116,14 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
         // Respawn ender dragon if server was offline during respawn time
         if(gameManager.getDragonRespawnTime() < System.currentTimeMillis()) {
             gameManager.respawnEnderDragon();
+        } else {
+            long ticks = (gameManager.getDragonRespawnTime() - System.currentTimeMillis()) / 50L;
+
+            if(ticks / 20 <= getConfig().getLong("dragon_respawn_delay") * 60) {
+                getComponentLogger().info("Respawning Ender Dragon in {}m{}s", (int) (ticks / 20 / 60), (int) ((ticks/20) % 60));
+            }
+
+            Bukkit.getScheduler().runTaskLater(this, () -> gameManager.respawnEnderDragon(), ticks);
         }
 
         // Custom day/night cycle
