@@ -27,7 +27,7 @@ The following features are currently missing / need work:
 **Note:** By default, all settings are chosen such that they reflect the official rules. You might, however, want to change settings such as permadeath if you play with friends.
 
 Once the server has been started, you can find multiple configuration files in the `plugins/DLDS` folder. The file `config.yml` is for general customization.
-You can change the difficulty (choose between `EASY`, `NORMAL`, and `HARD`), the world border size (choose `0` to disable), whether permadeath should be enabled (choose between `true` and `false`), the delay used for respawning the dragon (in minutes), the playtime (in seconds) and whether or not players are kicked onced their time is up (choose between `true` and `false`).
+You can change the difficulty (choose between `EASY`, `NORMAL`, and `HARD`), the world border size (choose `0` to disable), whether permadeath should be enabled (choose between `true` and `false`), the delay used for respawning the dragon (in minutes), the playtime (in seconds) and whether players are kicked once their time is up (choose between `true` and `false`).
 
 The file `rewards.yml` contains all advancements and their rewards. Only change this file if you know what you are doing!
 
