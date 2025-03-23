@@ -87,10 +87,20 @@ public class GameManager implements Listener {
         // Set time
         overworld.setTime(0);
 
+        // Get random spawn location and generate chunks
+        Location location = getRandomSpawnLocation();
+        int chunkX = location.getChunk().getX();
+        int chunkZ = location.getChunk().getZ();
+        for(int x = chunkX - 5; x < chunkX + 5; x++) {
+            for(int z = chunkZ - 5; z < chunkZ + 5; z++) {
+                overworld.getChunkAtAsync(x, z, true);
+            }
+        }
+
         // Start countdown and teleport players
         new BukkitRunnable() {
 
-            private int countdown = 5;
+            private int countdown = 10;
 
             @Override
             public void run() {
@@ -106,7 +116,7 @@ public class GameManager implements Listener {
                     }
                     countdown--;
                 } else {
-                    teleportPlayersRandomly();
+                    teleportPlayers(location);
                     removeAllAdvancements();
 
                     // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP
@@ -122,6 +132,8 @@ public class GameManager implements Listener {
                             player.setGameMode(GameMode.SURVIVAL);
                             player.setHealth(20D);
                             player.setFoodLevel(20);
+                            player.setExperienceLevelAndProgress(0);
+                            player.clearActivePotionEffects();
                         }
                     }
                     cancel();
@@ -423,7 +435,17 @@ public class GameManager implements Listener {
         }
     }
 
-    private void teleportPlayersRandomly() {
+    private void teleportPlayers(Location location) {
+        for (PlayerData playerData : players.values()) {
+            Player player = plugin.getServer().getPlayer(playerData.getUuid());
+            if (player != null) {
+                player.teleportAsync(location);
+                player.setRespawnLocation(location, true);
+            }
+        }
+    }
+
+    private Location getRandomSpawnLocation() {
         World overworld = plugin.getServer().getWorlds().getFirst();
 
         Location randomLoc;
@@ -431,13 +453,7 @@ public class GameManager implements Listener {
             randomLoc = getRandomLocation(overworld).add(0, 1, 0);
         } while (overworld.getBiome(randomLoc).getKey().asString().contains("ocean"));
 
-        for (PlayerData playerData : players.values()) {
-            Player player = plugin.getServer().getPlayer(playerData.getUuid());
-            if (player != null) {
-                player.teleportAsync(randomLoc);
-                player.setRespawnLocation(randomLoc, true);
-            }
-        }
+        return randomLoc;
     }
 
     private Location getRandomLocation(World world) {
