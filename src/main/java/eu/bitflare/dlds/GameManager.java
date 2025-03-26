@@ -1,8 +1,12 @@
 package eu.bitflare.dlds;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
@@ -16,17 +20,23 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
-import org.bukkit.event.player.PlayerAdvancementDoneEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.OminousBottleMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
+import java.time.Duration;
 import java.util.*;
+
+import static eu.bitflare.dlds.DLDSColor.DARK_GREY;
+import static eu.bitflare.dlds.DLDSColor.LIGHT_GREY;
+import static net.kyori.adventure.text.Component.text;
 
 public class GameManager implements Listener {
 
@@ -65,30 +75,14 @@ public class GameManager implements Listener {
         if(isGameRunning) {
             return false;
         }
-
-        Bukkit.broadcast(Component.text("DLDS will start soon!"));
         isGameRunning = true;
 
-        // Set world border
         World overworld = plugin.getServer().getWorlds().getFirst();
-        int size = plugin.getConfig().getInt("worldborder");
-        if(size > 0) {
-            WorldBorder border = overworld.getWorldBorder();
-            border.setCenter(0, 0);
-            border.setSize(size);
-        }
+        int worldborderSize = plugin.getConfig().getInt("worldborder");
 
-        // Set difficulty
-        Difficulty difficulty = Difficulty.valueOf(plugin.getConfig().getString("difficulty"));
-        for(World world : plugin.getServer().getWorlds()) {
-            world.setDifficulty(difficulty);
-        }
-
-        // Set time
-        overworld.setTime(0);
 
         // Get random spawn location and generate chunks
-        Location location = getRandomSpawnLocation();
+        Location location = getRandomSpawnLocation(worldborderSize == 0 ? 10000 : worldborderSize/2.0);
         int chunkX = location.getChunk().getX();
         int chunkZ = location.getChunk().getZ();
         for(int x = chunkX - 5; x < chunkX + 5; x++) {
@@ -97,51 +91,126 @@ public class GameManager implements Listener {
             }
         }
 
+
+        // Give blindness, slowness and play sound
+        for(Player player : getOnlineRegisteredPlayers()) {
+            player.setWalkSpeed(0);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20*13, 1, false, false));
+        }
+
+        // Show loading message
+        Component message = Component.text("The game will start soon!").color(DLDSColor.LIGHT_BLUE);
+        Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1));
+        broadcastTitleToRegisteredPlayers(message, Component.empty(), times);
+
+
         // Start countdown and teleport players
         new BukkitRunnable() {
 
-            private int countdown = 10;
+            private int countdown = 12;
+            private final Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(1), Duration.ofMillis(250));
 
             @Override
             public void run() {
-                if(countdown > 0) {
-                    for(PlayerData playerData : players.values()) {
-                        Player player = plugin.getServer().getPlayer(playerData.getUuid());
 
-                        if(player != null) {
-                            Title title = Title.title(Component.text(String.valueOf(countdown)).color(DLDSColor.RED), Component.text(""));
-                            player.showTitle(title);
+                switch (countdown) {
+                    case 11 -> {
+                        // Player sound shortly after countdown started
+                        for(Player player : getOnlineRegisteredPlayers()) {
+                            player.playSound(player.getLocation(), Sound.ENTITY_WARDEN_NEARBY_CLOSER, 1f, 1f);
+                        }
+                    }
+                    case 1, 2, 3, 4, 5 -> {
+                        // Teleport and reset players once countdown reaches 5
+                        if(countdown == 5) {
+                            teleportPlayers(location);
                         }
 
+                        // Only show countdown and play notes for the last five seconds
+
+                        TextColor color = switch (countdown) {
+                            case 3 -> DLDSColor.ORANGE;
+                            case 2 -> DLDSColor.YELLOW;
+                            case 1 -> DLDSColor.LIGHT_GREEN;
+                            default -> DLDSColor.WHITE;
+                        };
+                        broadcastTitleToRegisteredPlayers(Component.text(countdown).color(color), Component.empty(), times);
+
+                        // Play note
+                        for (Player player : getOnlineRegisteredPlayers()) {
+                            player.playNote(location, Instrument.PIANO, Note.natural(0, Note.Tone.F));
+                        }
                     }
-                    countdown--;
-                } else {
-                    teleportPlayers(location);
-                    removeAllAdvancements();
+                    case 0 -> {
 
-                    // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP
-                    for(PlayerData playerData : players.values()) {
-                        Player player = plugin.getServer().getPlayer(playerData.getUuid());
+                        // Set world border
+                        if(worldborderSize > 0) {
+                            WorldBorder border = overworld.getWorldBorder();
+                            border.setCenter(0, 0);
+                            border.setSize(worldborderSize);
+                        }
 
-                        playerData.setRemainingTime(plugin.getConfig().getLong("playtime"));
+                        // Set difficulty
+                        Difficulty difficulty = Difficulty.valueOf(plugin.getConfig().getString("difficulty"));
+                        for(World world : plugin.getServer().getWorlds()) {
+                            world.setDifficulty(difficulty);
+                        }
 
-                        if(player != null) {
+                        // Set time
+                        overworld.setTime(0);
+
+                        // Send final title and sound
+                        broadcastTitleToRegisteredPlayers(Component.text("0").color(DLDSColor.RED), Component.empty(), times);
+                        for(Player player : getOnlineRegisteredPlayers()) {
+                            player.playNote(location, Instrument.PIANO, Note.natural(1, Note.Tone.F));
+                            player.playSound(location, Sound.BLOCK_NOTE_BLOCK_IMITATE_ENDER_DRAGON, 1.0F, 1.0F);
+                        }
+
+                        // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP, ...
+                        for(Player player : getOnlineRegisteredPlayers()) {
+                            PlayerData playerData = players.get(player.getUniqueId());
+                            playerData.setRemainingTime(plugin.getConfig().getLong("playtime"));
+
+                            resetPlayer(player);
+
+                            // Create scoreboard
                             plugin.getScoreboardManager().createBoardForPlayers(player);
-                            player.getInventory().clear();
-                            player.updateInventory();
-                            player.setGameMode(GameMode.SURVIVAL);
-                            player.setHealth(20D);
-                            player.setFoodLevel(20);
-                            player.setExperienceLevelAndProgress(0);
-                            player.clearActivePotionEffects();
                         }
+                        cancel();
                     }
-                    cancel();
                 }
+
+                countdown--;
             }
         }.runTaskTimer(plugin, 0L, 20L);
 
         return true;
+    }
+
+    public void resetPlayer(Player player) {
+        // Revoke all advancements
+        Iterator<Advancement> it = Bukkit.getServer().advancementIterator();
+        while(it.hasNext()) {
+            Advancement advancement = it.next();
+            AdvancementProgress progress = player.getAdvancementProgress(advancement);
+            for(String criteria : advancement.getCriteria()) {
+                progress.revokeCriteria(criteria);
+            }
+        }
+
+        // Set gamemode
+        player.setGameMode(GameMode.SURVIVAL);
+
+        // Reset player to clean state
+        player.getInventory().clear();
+        player.updateInventory();
+        player.setHealth(20D);
+        player.setFoodLevel(20);
+        player.setSaturation(5);
+        player.setExperienceLevelAndProgress(0);
+        player.clearActivePotionEffects();
+        player.setWalkSpeed(0.2f);
+
     }
 
     public void startTimers() {
@@ -204,6 +273,49 @@ public class GameManager implements Listener {
     }
 
     @EventHandler
+    public void onChat(AsyncChatEvent event) {
+        event.renderer(((source, sourceDisplayName, message, viewer) ->
+                Component.empty()
+                                .append(sourceDisplayName.style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                                .append(text(" > ", DARK_GREY))
+                                .append(message.color(LIGHT_GREY))
+        ));
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        event.joinMessage(DLDSComponents.playerJoinMessage(player));
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        PlayerData playerData = players.get(player.getUniqueId());
+
+        // If the player is registered and kicked, check if we need to alter the quit message
+        if(playerData != null && event.getReason().equals(PlayerQuitEvent.QuitReason.KICKED)) {
+
+            // If the player just ran out of time, send a custom quit message
+            if(plugin.getConfig().getBoolean("timeout_kick")
+                    && (playerData.getRemainingTime() == 0L || playerData.getRemainingTime() == -1L)) {
+                event.quitMessage(DLDSComponents.playerTimeoutQuitMessage(player));
+                return;
+            }
+
+            // If the player is dead, do not send a kick message at all (normal death message displayed instead)
+            if(plugin.getConfig().getBoolean("permadeath")
+                    && playerData.isDead()) {
+                event.quitMessage(null);
+                return;
+            }
+        }
+
+        // Normal quit message
+        event.quitMessage(DLDSComponents.playerQuitMessage(player));
+    }
+
+    @EventHandler
     public void onPlayerAdvancement(PlayerAdvancementDoneEvent event) {
         handleAdvancement(event.getPlayer(), event.getAdvancement());
     }
@@ -250,9 +362,10 @@ public class GameManager implements Listener {
             awardItems(player, rewards);
             awardExperience(player, experience);
 
-            Bukkit.broadcast(player.displayName().append(Component.text(" has earned an advancement and got some rewards!")));
+            broadcastMessageToRegisteredPlayers(DLDSComponents.newAdvancementMessage(player));
         }
 
+        player.playNote(player.getLocation(), Instrument.PIANO, Note.natural(1, Note.Tone.A));
 
         // Send point notification to all registered players
         int points = getAdvancementPoints(rewardSection);
@@ -261,6 +374,31 @@ public class GameManager implements Listener {
 
         // Update Scoreboards
         plugin.getScoreboardManager().updateBoards();
+    }
+
+    public void broadcastTitleToRegisteredPlayers(Component title, Component subtitle, Title.Times times) {
+        for(Player player : getOnlineRegisteredPlayers()) {
+            player.showTitle(Title.title(title, subtitle, times));
+        }
+    }
+
+    public void broadcastMessageToRegisteredPlayers(Component... components) {
+        for(Player player : getOnlineRegisteredPlayers()) {
+            for(Component component : components) {
+                player.sendMessage(component);
+            }
+        }
+    }
+
+    public List<Player> getOnlineRegisteredPlayers() {
+        LinkedList<Player> res = new LinkedList<>();
+        for(PlayerData playerData : players.values()) {
+            Player player = plugin.getServer().getPlayer(playerData.getUuid());
+            if (player != null && player.isOnline()) {
+                res.add(player);
+            }
+        }
+        return res;
     }
 
     @EventHandler
@@ -387,6 +525,8 @@ public class GameManager implements Listener {
         Player player = event.getEntity();
         PlayerData playerData = players.get(player.getUniqueId());
 
+        event.deathMessage(DLDSComponents.playerDeathMessage(player));
+
         // Ignore if permadeath is off
         if(!plugin.getConfig().getBoolean("permadeath")) {
             return;
@@ -407,6 +547,8 @@ public class GameManager implements Listener {
         player.kick(
                 DLDSComponents.getPlayerDeathKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
         );
+
+
     }
 
     private void broadCastActionBar(Component component) {
@@ -414,23 +556,6 @@ public class GameManager implements Listener {
             Player player = plugin.getServer().getPlayer(pd.getUuid());
             if(player != null) {
                 player.sendActionBar(component);
-            }
-        }
-    }
-
-    private void removeAllAdvancements() {
-        for(PlayerData playerData : players.values()) {
-            Player player = plugin.getServer().getPlayer(playerData.getUuid());
-            if(player != null) {
-
-                Iterator<Advancement> it = Bukkit.getServer().advancementIterator();
-                while(it.hasNext()) {
-                    Advancement advancement = it.next();
-                    AdvancementProgress progress = player.getAdvancementProgress(advancement);
-                    for(String criteria : advancement.getCriteria()) {
-                        progress.revokeCriteria(criteria);
-                    }
-                }
             }
         }
     }
@@ -445,20 +570,18 @@ public class GameManager implements Listener {
         }
     }
 
-    private Location getRandomSpawnLocation() {
+    private Location getRandomSpawnLocation(double size) {
         World overworld = plugin.getServer().getWorlds().getFirst();
 
         Location randomLoc;
         do {
-            randomLoc = getRandomLocation(overworld).add(0, 1, 0);
-        } while (overworld.getBiome(randomLoc).getKey().asString().contains("ocean"));
+            randomLoc = getRandomLocation(overworld, size).add(0, 1, 0);
+        } while (overworld.getBiome(randomLoc).getKey().asString().contains("ocean") || overworld.getHighestBlockAt(randomLoc).isLiquid());
 
         return randomLoc;
     }
 
-    private Location getRandomLocation(World world) {
-        WorldBorder border = world.getWorldBorder();
-        double size = border.getSize() / 2;
+    private Location getRandomLocation(World world, double size) {
         double x = (Math.random() * size) - (size / 2);
         double z = (Math.random() * size) - (size / 2);
         int y = world.getHighestBlockYAt((int) x, (int) z);
