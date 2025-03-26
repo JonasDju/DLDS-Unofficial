@@ -1,5 +1,6 @@
 package eu.bitflare.dlds;
 
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
@@ -18,6 +19,8 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.*;
@@ -44,6 +47,7 @@ public class GameManager implements Listener {
     private Map<UUID, PlayerData> players;
     private boolean isGameRunning;
     private boolean isTimerRunning;
+    private boolean isCountdownRunning;
     private long dragonRespawnTime;
 
     public GameManager(DLDSPlugin plugin) {
@@ -51,6 +55,7 @@ public class GameManager implements Listener {
         this.players = new HashMap<>();
         this.isGameRunning = false;
         this.isTimerRunning = false;
+        this.isCountdownRunning = false;
         this.dragonRespawnTime = Long.MAX_VALUE;
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -105,6 +110,7 @@ public class GameManager implements Listener {
 
 
         // Start countdown and teleport players
+        isCountdownRunning = true;
         new BukkitRunnable() {
 
             private int countdown = 12;
@@ -176,6 +182,7 @@ public class GameManager implements Listener {
                             // Create scoreboard
                             plugin.getScoreboardManager().createBoardForPlayers(player);
                         }
+                        isCountdownRunning = false;
                         cancel();
                     }
                 }
@@ -270,6 +277,29 @@ public class GameManager implements Listener {
         }
         this.players.clear();
         return true;
+    }
+
+    @EventHandler
+    public void onDamage(EntityDamageEvent event) {
+        if(event.getEntity() instanceof Player player) {
+            if(players.containsKey(player.getUniqueId()) && isCountdownRunning) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onJump(PlayerJumpEvent event) {
+        if(players.containsKey(event.getPlayer().getUniqueId()) && isCountdownRunning) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        if(players.containsKey(event.getPlayer().getUniqueId()) && isCountdownRunning) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
