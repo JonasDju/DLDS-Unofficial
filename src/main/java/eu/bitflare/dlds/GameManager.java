@@ -218,6 +218,7 @@ public class GameManager implements Listener {
         player.setExperienceLevelAndProgress(0);
         player.clearActivePotionEffects();
         player.setWalkSpeed(0.2f);
+        player.setFireTicks(0);
 
     }
 
