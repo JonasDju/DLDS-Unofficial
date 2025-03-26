@@ -210,6 +210,7 @@ public class GameManager implements Listener {
 
         // Reset player to clean state
         player.getInventory().clear();
+        player.getInventory().setItem(4, new ItemStack(Material.CLOCK, 1));
         player.updateInventory();
         player.setHealth(20D);
         player.setFoodLevel(20);
