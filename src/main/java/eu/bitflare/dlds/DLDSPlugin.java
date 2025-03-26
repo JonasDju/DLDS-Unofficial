@@ -23,6 +23,8 @@ import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 
+import static net.kyori.adventure.text.Component.text;
+
 public class DLDSPlugin extends JavaPlugin implements Listener {
 
     private FileConfiguration rewardConfig;
@@ -109,7 +111,15 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
         saveDefaultConfig();
         getConfig().options().copyDefaults(true);
+
+        int worldborderSize = getConfig().getInt("worldborder");
+        if(worldborderSize < 10000 && worldborderSize != 0) {
+            getComponentLogger().warn(text().content("Invalid world border size! Resetting value to default of 10000...").build());
+            getConfig().set("worldborder", 10000);
+        }
         saveConfig();
+
+
 
         Bukkit.getPluginManager().registerEvents(this, this);
         loadRewards();

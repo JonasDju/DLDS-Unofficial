@@ -12,7 +12,7 @@ difficulty: HARD
 
 # Worldborder: The size of the worldborder that is created once the game starts
 # Default: 10000
-# If you want to disable the world border, choose a value of zero.
+# If you want to disable the world border, choose a value of zero. Values smaller than 10000 (except for 0) are not allowed.
 worldborder: 10000
 
 # Timeout Kick: Once the time of a player runs out, he will be kicked from the server and not allowed to rejoin.
