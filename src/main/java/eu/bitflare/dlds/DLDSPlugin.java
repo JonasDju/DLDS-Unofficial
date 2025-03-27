@@ -3,10 +3,11 @@ package eu.bitflare.dlds;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
@@ -22,7 +23,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 
 import static net.kyori.adventure.text.Component.text;
 
@@ -53,11 +53,13 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                     .executes(ctx -> {
                         if(gameManager.getPlayers().isEmpty()){
                             ctx.getSource().getSender().sendMessage(DLDSComponents.startNoPlayers());
+                            gameManager.playErrorSound(ctx.getSource().getExecutor());
                             return Command.SINGLE_SUCCESS;
                         }
 
                         if(!gameManager.startGame()){
                             ctx.getSource().getSender().sendMessage(DLDSComponents.startAlreadyRunning());
+                            gameManager.playErrorSound(ctx.getSource().getExecutor());
                         }
                         return Command.SINGLE_SUCCESS;
                     }))
@@ -65,28 +67,31 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                     .executes(ctx -> {
                         if(!gameManager.stopGame()){
                             ctx.getSource().getSender().sendMessage(DLDSComponents.stopNotStarted());
+                            gameManager.playErrorSound(ctx.getSource().getExecutor());
                         }
                         return Command.SINGLE_SUCCESS;
                     }))
             .then(Commands.literal("time")
                     .then(Commands.literal("set")
-                            .then(Commands.argument("player", StringArgumentType.string())
+                            .then(Commands.argument("player", ArgumentTypes.player())
                                     .then(Commands.argument("hours", IntegerArgumentType.integer(0, 23))
                                             .then(Commands.argument("minutes", IntegerArgumentType.integer(0, 59))
                                                     .then(Commands.argument("seconds", IntegerArgumentType.integer(0, 59))
                                                             .executes(ctx -> {
-                                                                String playerName = StringArgumentType.getString(ctx, "player");
+                                                                final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                                                final Player player = targetResolver.resolve(ctx.getSource()).getFirst();
+
+
                                                                 int hours = IntegerArgumentType.getInteger(ctx, "hours");
                                                                 int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
                                                                 int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
 
-
-                                                                UUID playerUUID = Bukkit.getServer().getPlayerUniqueId(playerName);
-                                                                if (gameManager.setTimeForPlayer(playerUUID, hours, minutes, seconds)) {
-                                                                    ctx.getSource().getSender().sendMessage(DLDSComponents.timeSuccess(playerName, hours, minutes, seconds));
+                                                                if (gameManager.setTimeForPlayer(player, hours, minutes, seconds)) {
+                                                                    ctx.getSource().getSender().sendMessage(DLDSComponents.timeSuccess(player, hours, minutes, seconds));
                                                                     return Command.SINGLE_SUCCESS;
                                                                 }
-                                                                ctx.getSource().getSender().sendMessage(DLDSComponents.timePlayerNotFound(playerName));
+                                                                ctx.getSource().getSender().sendMessage(DLDSComponents.timePlayerNotFound(player));
+                                                                gameManager.playErrorSound(ctx.getSource().getExecutor());
                                                                 return Command.SINGLE_SUCCESS;
                                                             })
                                                     )

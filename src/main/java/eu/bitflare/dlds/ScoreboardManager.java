@@ -85,7 +85,7 @@ public class ScoreboardManager implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        if(plugin.getGameManager().getRegisteredUUIDs().contains(player.getUniqueId())) {
+        if(plugin.getGameManager().getRegisteredUUIDs().contains(player.getUniqueId()) && plugin.getGameManager().isGameRunning()) {
             createBoardForPlayers(player);
         }
     }

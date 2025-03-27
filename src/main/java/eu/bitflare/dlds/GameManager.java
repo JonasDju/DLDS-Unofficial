@@ -64,15 +64,18 @@ public class GameManager implements Listener {
     public void registerPlayer(Player player) {
         if(isGameRunning) {
             player.sendMessage(DLDSComponents.registerGameAlradyRunning());
+            playErrorSound(player);
             return;
         }
 
         UUID uuid = player.getUniqueId();
         if(players.containsKey(uuid)) {
             player.sendMessage(DLDSComponents.registerAlreadyRegistered());
+            playErrorSound(player);
         } else {
             players.put(uuid, new PlayerData(uuid, player.getName()));
             player.sendMessage(DLDSComponents.registerSuccess());
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
         }
     }
 
@@ -559,6 +562,15 @@ public class GameManager implements Listener {
 
         event.deathMessage(DLDSComponents.playerDeathMessage(player));
 
+        // Play thunder sound for all other players
+        plugin.getLogger().info("Playing sounds:");
+        for(Player otherplayer : getOnlineRegisteredPlayers()) {
+            if(!otherplayer.getUniqueId().equals(player.getUniqueId())) {
+                plugin.getLogger().info(otherplayer.getName());
+                otherplayer.playSound(otherplayer.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
+            }
+        }
+
         // Ignore if permadeath is off
         if(!plugin.getConfig().getBoolean("permadeath")) {
             return;
@@ -593,12 +605,32 @@ public class GameManager implements Listener {
     }
 
     private void teleportPlayers(Location location) {
-        for (PlayerData playerData : players.values()) {
-            Player player = plugin.getServer().getPlayer(playerData.getUuid());
-            if (player != null) {
-                player.teleportAsync(location);
+        World overworld = plugin.getServer().getWorlds().getFirst();
+        plugin.getLogger().info("Random loc: " + location);
+
+        for(Player player : getOnlineRegisteredPlayers()) {
+            int deltaX, deltaZ;
+            int tries = 0;
+            Block highestBlock;
+            do {
+                tries++;
+                deltaX = (int) (Math.random() * 10 - 5);
+                deltaZ = (int) (Math.random() * 10 - 5);
+                highestBlock = overworld.getHighestBlockAt(location.getBlockX() + deltaX, location.getBlockZ() + deltaZ);
+            } while(highestBlock.isLiquid() && tries < 5);
+
+            // Teleport player to original random position if we could not find a suitable random offset
+            if(tries == 5) {
+                player.teleport(location);
                 player.setRespawnLocation(location, true);
+                continue;
             }
+
+            // Teleport player to random offset location
+            Location randomOffsetLoc = highestBlock.getLocation().add(0, 1, 0);
+            plugin.getLogger().info("Player " + player.getName() + " teleported to " + randomOffsetLoc);
+            player.teleport(randomOffsetLoc);
+            player.setRespawnLocation(randomOffsetLoc, true);
         }
     }
 
@@ -744,6 +776,16 @@ public class GameManager implements Listener {
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP,1f, 1f);
     }
 
+    public void playErrorSound(Entity entity) {
+        if(entity instanceof Player player) {
+            playErrorSound(player);
+        }
+    }
+
+    public void playErrorSound(Player player) {
+        player.playNote(player.getLocation(), Instrument.DIDGERIDOO, Note.sharp(0, Note.Tone.F));
+    }
+
     public Set<UUID> getRegisteredUUIDs(){
         return players.keySet();
     }
@@ -805,8 +847,8 @@ public class GameManager implements Listener {
         this.dragonRespawnTime = dragonRespawnTime;
     }
 
-    public boolean setTimeForPlayer(UUID playerUUID, int hours, int minutes, int seconds) {
-        PlayerData playerData = players.get(playerUUID);
+    public boolean setTimeForPlayer(Player player, int hours, int minutes, int seconds) {
+        PlayerData playerData = players.get(player.getUniqueId());
 
         if(playerData == null) {
             // Player not registered

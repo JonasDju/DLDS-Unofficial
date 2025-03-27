@@ -176,13 +176,11 @@ public class DLDSComponents {
 
     // start -> already running
     public static Component startAlreadyRunning() {
-        return chatPrefix(scoreboardHeader).append(text()
-                .color(LIGHT_GREY)
-                .content("Error: DLDS is ")
+        return chatPrefix(scoreboardHeader)
+                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                .append(text("DLDS is", RED))
                 .append(text("already running", RED))
-                .append(text("!", LIGHT_GREY))
-                .build()
-        );
+                .append(text("!", LIGHT_GREY));
     }
 
     // stop -> not started
@@ -206,22 +204,22 @@ public class DLDSComponents {
     }
 
     // time -> player not found / registered
-    public static Component timePlayerNotFound(String playerName) {
+    public static Component timePlayerNotFound(Player player) {
         return chatPrefix(scoreboardHeader)
                 .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
                 .append(text("The player ", LIGHT_GREY))
-                .append(text(playerName, LIGHT_GREEN))
+                .append(text(player.getName(), LIGHT_GREEN))
                 .append(text(" is ", LIGHT_GREY))
                 .append(text("not registered", RED))
                 .append(text("!", LIGHT_GREY));
     }
 
     // time -> success
-    public static Component timeSuccess(String playerName, int hours, int minutes, int seconds) {
+    public static Component timeSuccess(Player player, int hours, int minutes, int seconds) {
         String time = String.format("%02d:%02d:%02d", hours, minutes, seconds);
         return chatPrefix(scoreboardHeader)
                 .append(text("Time set for player ", LIGHT_GREY))
-                .append(text(playerName, LIGHT_GREEN))
+                .append(text(player.getName(), LIGHT_GREEN))
                 .append(text(" to ", LIGHT_GREY))
                 .append(text(time, YELLOW))
                 .append(text("!", LIGHT_GREY));
