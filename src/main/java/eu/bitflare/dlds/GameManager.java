@@ -63,16 +63,16 @@ public class GameManager implements Listener {
 
     public void registerPlayer(Player player) {
         if(isGameRunning) {
-            player.sendPlainMessage("Error: You cannot enter because DLDS is already running!");
+            player.sendMessage(DLDSComponents.registerGameAlradyRunning());
             return;
         }
 
         UUID uuid = player.getUniqueId();
         if(players.containsKey(uuid)) {
-            player.sendPlainMessage("Error: You have already entered the event!");
+            player.sendMessage(DLDSComponents.registerAlreadyRegistered());
         } else {
             players.put(uuid, new PlayerData(uuid, player.getName()));
-            player.sendPlainMessage("You have entered the event!");
+            player.sendMessage(DLDSComponents.registerSuccess());
         }
     }
 
@@ -267,7 +267,7 @@ public class GameManager implements Listener {
         World overworld = plugin.getServer().getWorlds().getFirst();
         overworld.getWorldBorder().reset();
 
-        Bukkit.broadcast(Component.text("DLDS has been stopped!"));
+        broadcastMessageToRegisteredPlayers(DLDSComponents.stopSuccess());
 
         // Reset registered players
         for(PlayerData playerData : players.values()) {
@@ -724,7 +724,7 @@ public class GameManager implements Listener {
         player.updateInventory();
 
         if(!remainder.isEmpty()) {
-            player.sendPlainMessage("Warning: Your inventory is full! All remaining rewards have been dropped at your location.");
+            player.sendMessage(DLDSComponents.rewardInventoryFull());
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
 
             for(ItemStack item : remainder) {
@@ -805,14 +805,17 @@ public class GameManager implements Listener {
         this.dragonRespawnTime = dragonRespawnTime;
     }
 
-    public boolean setTimeForPlayer(String playerName, int hours, int minutes, int seconds) {
-        for (PlayerData playerData : players.values()) {
-            if (playerData.getPlayerName().equalsIgnoreCase(playerName)) {
-                long totalSeconds = (hours * 3600L) + (minutes * 60L) + seconds;
-                playerData.setRemainingTime(totalSeconds);
-                return true;
-            }
+    public boolean setTimeForPlayer(UUID playerUUID, int hours, int minutes, int seconds) {
+        PlayerData playerData = players.get(playerUUID);
+
+        if(playerData == null) {
+            // Player not registered
+            return false;
         }
-        return false;
+
+        // Set remaining time
+        long totalSeconds = (hours * 3600L) + (minutes * 60L) + seconds;
+        playerData.setRemainingTime(totalSeconds);
+        return true;
     }
 }

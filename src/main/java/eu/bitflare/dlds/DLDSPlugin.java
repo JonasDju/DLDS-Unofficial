@@ -22,6 +22,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 import static net.kyori.adventure.text.Component.text;
 
@@ -41,7 +42,7 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                         Entity executor = ctx.getSource().getExecutor();
 
                         if(!(executor instanceof Player player)) {
-                            sender.sendPlainMessage("Error: You must be a player to use this command!");
+                            sender.sendMessage(DLDSComponents.mustBePlayer());
                             return Command.SINGLE_SUCCESS;
                         }
 
@@ -51,19 +52,19 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
             .then(Commands.literal("start")
                     .executes(ctx -> {
                         if(gameManager.getPlayers().isEmpty()){
-                            ctx.getSource().getSender().sendPlainMessage("Error: No players have entered yet! Use \"/dlds enter\" to enter the game!");
+                            ctx.getSource().getSender().sendMessage(DLDSComponents.startNoPlayers());
                             return Command.SINGLE_SUCCESS;
                         }
 
                         if(!gameManager.startGame()){
-                            ctx.getSource().getSender().sendPlainMessage("Error: DLDS is already running!");
+                            ctx.getSource().getSender().sendMessage(DLDSComponents.startAlreadyRunning());
                         }
                         return Command.SINGLE_SUCCESS;
                     }))
             .then(Commands.literal("stop")
                     .executes(ctx -> {
                         if(!gameManager.stopGame()){
-                            ctx.getSource().getSender().sendPlainMessage("Error: DLDS has not started yet!");
+                            ctx.getSource().getSender().sendMessage(DLDSComponents.stopNotStarted());
                         }
                         return Command.SINGLE_SUCCESS;
                     }))
@@ -79,11 +80,13 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                                                                 int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
                                                                 int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
 
-                                                                if (gameManager.setTimeForPlayer(playerName, hours, minutes, seconds)) {
-                                                                    ctx.getSource().getSender().sendPlainMessage("Time set for player " + playerName + " to " + hours + ":" + minutes + ":" + seconds);
+
+                                                                UUID playerUUID = Bukkit.getServer().getPlayerUniqueId(playerName);
+                                                                if (gameManager.setTimeForPlayer(playerUUID, hours, minutes, seconds)) {
+                                                                    ctx.getSource().getSender().sendMessage(DLDSComponents.timeSuccess(playerName, hours, minutes, seconds));
                                                                     return Command.SINGLE_SUCCESS;
                                                                 }
-                                                                ctx.getSource().getSender().sendPlainMessage("Error: Player not found!");
+                                                                ctx.getSource().getSender().sendMessage(DLDSComponents.timePlayerNotFound(playerName));
                                                                 return Command.SINGLE_SUCCESS;
                                                             })
                                                     )
@@ -93,7 +96,7 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                     )
             )
             .executes(ctx -> {
-                ctx.getSource().getSender().sendPlainMessage("DLDS Help:\n- /dlds enter\n- /dlds start\n- /dlds stop");
+                ctx.getSource().getSender().sendMessage(DLDSComponents.helpMessage());
                 return Command.SINGLE_SUCCESS;
             }).build();
 
