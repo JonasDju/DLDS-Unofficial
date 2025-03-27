@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "eu.bitflare"
-version = "0.2-ALPHA"
+version = "0.3-BETA"
 
 repositories {
     mavenCentral()
@@ -23,7 +23,6 @@ dependencies {
 }
 
 tasks.shadowJar {
-    // Replace "com.yourpackage" with the package of your plugin
     relocate("fr.mrmicky.fastboard", "eu.bitflare.fastboard")
 }
 

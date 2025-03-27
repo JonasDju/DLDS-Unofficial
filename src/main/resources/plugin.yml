@@ -1,5 +1,5 @@
 name: DLDS
-version: 0.2
+version: 0.3
 main: eu.bitflare.dlds.DLDSPlugin
 description: Die Liga Der Sterblichen
 author: JonasDju
