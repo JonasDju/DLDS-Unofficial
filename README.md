@@ -4,8 +4,8 @@ The event is an advancement run in which teams of streamers are given points for
 The goal is to get the most amount of points within 12 hours without dying.
 The first player in a team to complete an advancement is also given a reward, which differs for each advancement. The type of reward is determined by the difficulty of the advancement. You can learn more about DLDS [here](https://www.pietsmiet.live).
 
-## Warning: Alpha
-The plugin is in very early development. Expect bugs and/or crashes.
+## Beta
+The plugin is in early development. Please let me know in case you encounter any bugs.
 
 ## Features
 The plugin currently contains most of the core mechanics of the event but is very rough around the edges, as I currently lack the time to polish it. Right now, it supports:
@@ -17,10 +17,9 @@ The plugin currently contains most of the core mechanics of the event but is ver
 - Permadeath (can be turned off)
 - Customization (see below)
 - Time measurement (also the ability to change the time during a game)
-- Automatic Ender Dragon respawn after 10 minutes
+- Automatic Ender Dragon respawn after 10 minutes (can be configured)
 
 The following features are currently missing / need work:
-- Polishing (Colorful text, Soundeffects, ...)
 - Multiple teams on one server
 
 ## Customization
