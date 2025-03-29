@@ -235,7 +235,7 @@ minecraft:
       points: 1
       items:
         RAW_IRON: 1
-    read_power_from_chiseled_bookshelf:
+    read_power_of_chiseled_bookshelf:
       points: 2
       items:
         EMERALD: 1
