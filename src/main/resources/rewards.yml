@@ -479,7 +479,7 @@ minecraft:
       items:
         GOLDEN_CARROT: 5
         ENDER_PEARL: 1
-    breed_all_animals:
+    bred_all_animals:
       points: 75
       items:
         GOLDEN_APPLE: 10
