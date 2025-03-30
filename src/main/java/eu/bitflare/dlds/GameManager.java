@@ -563,10 +563,8 @@ public class GameManager implements Listener {
         event.deathMessage(DLDSComponents.playerDeathMessage(player));
 
         // Play thunder sound for all other players
-        plugin.getLogger().info("Playing sounds:");
         for(Player otherplayer : getOnlineRegisteredPlayers()) {
             if(!otherplayer.getUniqueId().equals(player.getUniqueId())) {
-                plugin.getLogger().info(otherplayer.getName());
                 otherplayer.playSound(otherplayer.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
             }
         }
@@ -606,7 +604,6 @@ public class GameManager implements Listener {
 
     private void teleportPlayers(Location location) {
         World overworld = plugin.getServer().getWorlds().getFirst();
-        plugin.getLogger().info("Random loc: " + location);
 
         for(Player player : getOnlineRegisteredPlayers()) {
             int deltaX, deltaZ;
@@ -628,7 +625,6 @@ public class GameManager implements Listener {
 
             // Teleport player to random offset location
             Location randomOffsetLoc = highestBlock.getLocation().add(0, 1, 0);
-            plugin.getLogger().info("Player " + player.getName() + " teleported to " + randomOffsetLoc);
             player.teleport(randomOffsetLoc);
             player.setRespawnLocation(randomOffsetLoc, true);
         }
