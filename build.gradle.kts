@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "eu.bitflare"
-version = "0.3-BETA"
+version = "0.4-BETA"
 
 repositories {
     mavenCentral()
