@@ -3,7 +3,9 @@ package eu.bitflare.dlds;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import eu.bitflare.dlds.exceptions.DLDSException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
@@ -34,7 +36,7 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
     private ScoreboardManager scoreboardManager;
     private FileManager fileManager;
 
-
+    @SuppressWarnings("UnstableApiUsage")
     LiteralCommandNode<CommandSourceStack> dldsCommand = Commands.literal("dlds")
             .then(Commands.literal("enter")
                     .executes(ctx -> {
@@ -100,6 +102,113 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
                             )
                     )
             )
+            .then(Commands.literal("team")
+                    .then(Commands.literal("create")
+                            .then(Commands.argument("teamname", StringArgumentType.word())
+                                    .executes(ctx -> {
+                                        CommandSender sender = ctx.getSource().getSender();
+                                        String teamName = StringArgumentType.getString(ctx, "teamname");
+
+                                        try {
+                                            gameManager.createTeam(teamName);
+                                            sender.sendMessage(DLDSComponents.teamCreateSuccess(teamName));
+                                        } catch (DLDSException e) {
+                                            sender.sendMessage(e.errorMessage());
+                                            gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                        }
+                                        return Command.SINGLE_SUCCESS;
+                                    })
+                            )
+                    )
+                    .then(Commands.literal("delete")
+                            .then(Commands.argument("teamname", StringArgumentType.word())
+                                    .suggests((ctx, builder) -> {
+                                        gameManager.getTeams().stream().map(DLDSTeam::getName)
+                                                .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
+                                                .forEach(builder::suggest);
+                                        return builder.buildFuture();
+                                    })
+                                    .executes(ctx -> {
+                                        CommandSender sender = ctx.getSource().getSender();
+                                        String teamName = StringArgumentType.getString(ctx, "teamname");
+
+                                        try {
+                                            gameManager.removeTeam(teamName);
+                                            sender.sendMessage(DLDSComponents.teamRemoveSuccess(teamName));
+                                        } catch (DLDSException e){
+                                            sender.sendMessage(e.errorMessage());
+                                            gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                        }
+                                        return Command.SINGLE_SUCCESS;
+                                    })
+                            )
+                    )
+                    .then(Commands.literal("list")
+                            .executes(ctx -> {
+                                CommandSender sender = ctx.getSource().getSender();
+
+                                sender.sendMessage(DLDSComponents.teamList(gameManager.getTeams()));
+
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    )
+                    .then(Commands.literal("addplayer")
+                            .then(Commands.argument("player", ArgumentTypes.player())
+                                    .then(Commands.argument("teamname", StringArgumentType.word())
+                                            .suggests((ctx, builder) -> {
+                                                gameManager.getTeams().stream().map(DLDSTeam::getName)
+                                                        .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
+                                                        .forEach(builder::suggest);
+                                                return builder.buildFuture();
+                                            })
+                                            .executes(ctx -> {
+                                                CommandSender sender = ctx.getSource().getSender();
+                                                final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                                final Player player = targetResolver.resolve(ctx.getSource()).getFirst();
+                                                final String teamName = StringArgumentType.getString(ctx, "teamname");
+
+                                                try {
+                                                    gameManager.addPlayerToTeam(player, teamName);
+                                                    sender.sendMessage(DLDSComponents.teamAddPlayerSuccess(player, teamName));
+                                                } catch (DLDSException e) {
+                                                    sender.sendMessage(e.errorMessage());
+                                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                                }
+
+                                                return Command.SINGLE_SUCCESS;
+                                            })
+                                    )
+                            )
+                    )
+                    .then(Commands.literal("removeplayer")
+                            .then(Commands.argument("player", ArgumentTypes.player())
+                                    .then(Commands.argument("teamname", StringArgumentType.word())
+                                            .suggests((ctx, builder) -> {
+                                                gameManager.getTeams().stream().map(DLDSTeam::getName)
+                                                        .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
+                                                        .forEach(builder::suggest);
+                                                return builder.buildFuture();
+                                            })
+                                            .executes(ctx -> {
+                                                CommandSender sender = ctx.getSource().getSender();
+                                                final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                                final Player player = targetResolver.resolve(ctx.getSource()).getFirst();
+                                                final String teamName = StringArgumentType.getString(ctx, "teamname");
+
+                                                try {
+                                                    gameManager.removePlayerFromTeam(player, teamName);
+                                                    sender.sendMessage(DLDSComponents.teamRemovePlayerSuccess(player, teamName));
+                                                } catch (DLDSException e) {
+                                                    sender.sendMessage(e.errorMessage());
+                                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                                }
+
+                                                return Command.SINGLE_SUCCESS;
+                                            })
+                                    )
+                            )
+                    )
+            )
             .executes(ctx -> {
                 ctx.getSource().getSender().sendMessage(DLDSComponents.helpMessage());
                 return Command.SINGLE_SUCCESS;
@@ -108,6 +217,8 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onEnable() {
+
+        loadRewards();
 
         this.gameManager = new GameManager(this);
         this.scoreboardManager = new ScoreboardManager(this);
@@ -130,7 +241,6 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
 
         Bukkit.getPluginManager().registerEvents(this, this);
-        loadRewards();
         fileManager.loadGameState();
 
         // Respawn ender dragon if server was offline during respawn time

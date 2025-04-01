@@ -1,6 +1,10 @@
 package eu.bitflare.dlds;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import eu.bitflare.dlds.exceptions.PlayerAlreadyInTeamException;
+import eu.bitflare.dlds.exceptions.PlayerNotInTeamException;
+import eu.bitflare.dlds.exceptions.TeamAlreadyExistsException;
+import eu.bitflare.dlds.exceptions.TeamNotFoundException;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
@@ -45,20 +49,81 @@ public class GameManager implements Listener {
 
     private final DLDSPlugin plugin;
     private Map<UUID, PlayerData> players;
+    private Set<DLDSTeam> teams;
     private boolean isGameRunning;
     private boolean isTimerRunning;
     private boolean isCountdownRunning;
     private long dragonRespawnTime;
 
+    private final int totalAdvancementPoints;
+    private final int totalAdvancementCount;
+
     public GameManager(DLDSPlugin plugin) {
         this.plugin = plugin;
         this.players = new HashMap<>();
+        this.teams = new HashSet<>();
         this.isGameRunning = false;
         this.isTimerRunning = false;
         this.isCountdownRunning = false;
         this.dragonRespawnTime = Long.MAX_VALUE;
 
+        this.totalAdvancementPoints = computeTotalAdvancementPoints();
+        this.totalAdvancementCount = computeTotalAdvancementCount();
+
         Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
+
+    public void createTeam(String teamName) throws TeamAlreadyExistsException {
+        // Check if team already exists
+        Optional<DLDSTeam> team = getTeam(teamName);
+        if (team.isPresent()) {
+            throw new TeamAlreadyExistsException(team.get());
+        }
+
+        teams.add(new DLDSTeam(this, teamName));
+    }
+
+    public void removeTeam(String teamName) throws TeamNotFoundException {
+        // Check if team even exists
+        Optional<DLDSTeam> team = getTeam(teamName);
+        if(team.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
+        }
+
+        teams.remove(team.get());
+    }
+
+    public void addPlayerToTeam(Player player, String teamName) throws TeamNotFoundException, PlayerAlreadyInTeamException {
+        // Check if team exists
+        Optional<DLDSTeam> targetTeam = getTeam(teamName);
+        if(targetTeam.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
+        }
+
+        // Check if player is currently in another team
+        Optional<DLDSTeam> currentTeam = getTeam(player);
+        if(currentTeam.isPresent()) {
+            throw new PlayerAlreadyInTeamException(player, currentTeam.get());
+        }
+
+        // Add player to team
+        targetTeam.get().addPlayer(player);
+    }
+
+    public void removePlayerFromTeam(Player player, String teamName) throws TeamNotFoundException, PlayerNotInTeamException {
+        // Check if team even exists
+        Optional<DLDSTeam> targetTeam = getTeam(teamName);
+        if(targetTeam.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
+        }
+
+        // Check if player even is in the team
+        if(!targetTeam.get().containsPlayer(player)) {
+            throw new PlayerNotInTeamException(player, targetTeam.get());
+        }
+
+        // Remove player from team
+        targetTeam.get().removePlayer(player);
     }
 
     public void registerPlayer(Player player) {
@@ -73,7 +138,7 @@ public class GameManager implements Listener {
             player.sendMessage(DLDSComponents.registerAlreadyRegistered());
             playErrorSound(player);
         } else {
-            players.put(uuid, new PlayerData(uuid, player.getName()));
+            players.put(uuid, new PlayerData(player));
             player.sendMessage(DLDSComponents.registerSuccess());
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
         }
@@ -658,7 +723,7 @@ public class GameManager implements Listener {
         return plugin.getRewardConfig().getConfigurationSection(path);
     }
 
-    private ConfigurationSection getRewardsSection(NamespacedKey key) {
+    public ConfigurationSection getRewardsSection(NamespacedKey key) {
         String path = key.getNamespace() + "." + key.getKey().replace('/', '.');
         return plugin.getRewardConfig().getConfigurationSection(path);
     }
@@ -833,6 +898,41 @@ public class GameManager implements Listener {
     public int getMaxAdvancementAmount() {
         //TODO: replace hardcoded value
         return 118*players.size();
+    }
+
+    private int computeTotalAdvancementPoints() {
+        int res = 0;
+        List<String> configKeys = plugin.getRewardConfig().getKeys(true).stream().filter(s -> s.endsWith(".points")).toList();
+
+        for (String key : configKeys) {
+            res += plugin.getRewardConfig().getInt(key);
+        }
+        return res;
+    }
+
+    public Set<DLDSTeam> getTeams() {
+        return teams;
+    }
+
+    public Optional<DLDSTeam> getTeam(Player player) {
+        return teams.stream().filter(team -> team.containsPlayer(player)).findFirst();
+    }
+
+    public Optional<DLDSTeam> getTeam(String teamName) {
+        return teams.stream().filter(team -> team.getName().equalsIgnoreCase(teamName)).findFirst();
+    }
+
+    private int computeTotalAdvancementCount() {
+        List<String> configKeys = plugin.getRewardConfig().getKeys(true).stream().filter(s -> s.endsWith(".points")).toList();
+        return configKeys.size();
+    }
+
+    public int getTotalAdvancementCount() {
+        return totalAdvancementCount;
+    }
+
+    public int getTotalAdvancementPoints() {
+        return totalAdvancementPoints;
     }
 
     public long getDragonRespawnTime() {
