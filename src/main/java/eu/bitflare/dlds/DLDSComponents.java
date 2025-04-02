@@ -4,8 +4,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,6 +57,16 @@ public class DLDSComponents {
                 .build();
     }
 
+    // Chat prefix ( [...] teamName | )
+    public static Component chatPrefix(Component prefix, DLDSTeam team) {
+        Component res = chatPrefix(prefix);
+
+        if(team != null) {
+            res = res.append(text(team.getName(), LIGHT_BLUE)).append(text(" | ", DARK_GREY));
+        }
+        return res;
+    }
+
     // New advancement
     public static Component newAdvancementMessage(Player player) {
         return chatPrefix(scoreboardHeader).append(text()
@@ -82,14 +94,14 @@ public class DLDSComponents {
     }
 
     // Join message
-    public static Component playerJoinMessage(Player player) {
-        return chatPrefix(text("+", LIGHT_GREEN))
+    public static Component playerJoinMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("+", LIGHT_GREEN), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
     // Death message
-    public static Component playerDeathMessage(Player player) {
-        return chatPrefix(text("☠", RED))
+    public static Component playerDeathMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("☠", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 

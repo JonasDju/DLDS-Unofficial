@@ -4,6 +4,11 @@ package eu.bitflare.dlds;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import eu.bitflare.dlds.exceptions.DLDSException;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -24,6 +29,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static net.kyori.adventure.text.Component.text;
 
@@ -34,31 +40,43 @@ public class DLDSPlugin extends JavaPlugin {
     private GameManager gameManager;
     private ScoreboardManager scoreboardManager;
     private FileManager fileManager;
+    private final TeamSuggestionProvider teamSuggestionProvider = new TeamSuggestionProvider();
+
 
     @SuppressWarnings("UnstableApiUsage")
     LiteralCommandNode<CommandSourceStack> dldsCommand = Commands.literal("dlds")
             .then(Commands.literal("start")
-                    .executes(ctx -> {
-                        if(gameManager.getPlayers().isEmpty()){
-                            ctx.getSource().getSender().sendMessage(DLDSComponents.startNoPlayers());
-                            gameManager.playErrorSound(ctx.getSource().getExecutor());
-                            return Command.SINGLE_SUCCESS;
-                        }
+                    .then(Commands.argument("teamname", StringArgumentType.word())
+                            .suggests(teamSuggestionProvider)
+                            .executes(ctx -> {
+                                CommandSender sender = ctx.getSource().getSender();
+                                String teamName = StringArgumentType.getString(ctx, "teamname");
 
-                        if(!gameManager.startGame()){
-                            ctx.getSource().getSender().sendMessage(DLDSComponents.startAlreadyRunning());
-                            gameManager.playErrorSound(ctx.getSource().getExecutor());
-                        }
-                        return Command.SINGLE_SUCCESS;
-                    }))
+                                try {
+                                    gameManager.startGame(teamName);
+                                } catch (DLDSException e) {
+                                    sender.sendMessage(e.errorMessage());
+                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                }
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    ))
             .then(Commands.literal("stop")
-                    .executes(ctx -> {
-                        if(!gameManager.stopGame()){
-                            ctx.getSource().getSender().sendMessage(DLDSComponents.stopNotStarted());
-                            gameManager.playErrorSound(ctx.getSource().getExecutor());
-                        }
-                        return Command.SINGLE_SUCCESS;
-                    }))
+                    .then(Commands.argument("teamname", StringArgumentType.word())
+                            .suggests(teamSuggestionProvider)
+                            .executes(ctx -> {
+                                CommandSender sender = ctx.getSource().getSender();
+                                String teamName = StringArgumentType.getString(ctx, "teamname");
+
+                                try {
+                                    gameManager.stopGame(teamName);
+                                } catch (DLDSException e) {
+                                    sender.sendMessage(e.errorMessage());
+                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                }
+                                return Command.SINGLE_SUCCESS;
+                            })
+                    ))
             .then(Commands.literal("time")
                     .then(Commands.literal("set")
                             .then(Commands.argument("player", ArgumentTypes.player())
@@ -74,12 +92,13 @@ public class DLDSPlugin extends JavaPlugin {
                                                                 int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
                                                                 int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
 
-                                                                if (gameManager.setTimeForPlayer(player, hours, minutes, seconds)) {
+                                                                try {
+                                                                    gameManager.setTimeForPlayer(player, hours, minutes, seconds);
                                                                     ctx.getSource().getSender().sendMessage(DLDSComponents.timeSuccess(player, hours, minutes, seconds));
-                                                                    return Command.SINGLE_SUCCESS;
+                                                                } catch (DLDSException e) {
+                                                                    ctx.getSource().getSender().sendMessage(e.errorMessage());
+                                                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
                                                                 }
-                                                                ctx.getSource().getSender().sendMessage(DLDSComponents.timePlayerNotFound(player));
-                                                                gameManager.playErrorSound(ctx.getSource().getExecutor());
                                                                 return Command.SINGLE_SUCCESS;
                                                             })
                                                     )
@@ -108,12 +127,7 @@ public class DLDSPlugin extends JavaPlugin {
                     )
                     .then(Commands.literal("delete")
                             .then(Commands.argument("teamname", StringArgumentType.word())
-                                    .suggests((ctx, builder) -> {
-                                        gameManager.getTeams().stream().map(DLDSTeam::getName)
-                                                .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
-                                                .forEach(builder::suggest);
-                                        return builder.buildFuture();
-                                    })
+                                    .suggests(teamSuggestionProvider)
                                     .executes(ctx -> {
                                         CommandSender sender = ctx.getSource().getSender();
                                         String teamName = StringArgumentType.getString(ctx, "teamname");
@@ -141,12 +155,7 @@ public class DLDSPlugin extends JavaPlugin {
                     .then(Commands.literal("addplayer")
                             .then(Commands.argument("player", ArgumentTypes.player())
                                     .then(Commands.argument("teamname", StringArgumentType.word())
-                                            .suggests((ctx, builder) -> {
-                                                gameManager.getTeams().stream().map(DLDSTeam::getName)
-                                                        .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
-                                                        .forEach(builder::suggest);
-                                                return builder.buildFuture();
-                                            })
+                                            .suggests(teamSuggestionProvider)
                                             .executes(ctx -> {
                                                 CommandSender sender = ctx.getSource().getSender();
                                                 final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
@@ -177,12 +186,7 @@ public class DLDSPlugin extends JavaPlugin {
                     .then(Commands.literal("removeplayer")
                             .then(Commands.argument("player", ArgumentTypes.player())
                                     .then(Commands.argument("teamname", StringArgumentType.word())
-                                            .suggests((ctx, builder) -> {
-                                                gameManager.getTeams().stream().map(DLDSTeam::getName)
-                                                        .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
-                                                        .forEach(builder::suggest);
-                                                return builder.buildFuture();
-                                            })
+                                            .suggests(teamSuggestionProvider)
                                             .executes(ctx -> {
                                                 CommandSender sender = ctx.getSource().getSender();
                                                 final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
@@ -353,5 +357,20 @@ public class DLDSPlugin extends JavaPlugin {
     public FileConfiguration getRewardConfig() {
         return rewardConfig;
     }
+
+
+    @SuppressWarnings("UnstableApiUsage")
+    private class TeamSuggestionProvider implements SuggestionProvider<CommandSourceStack> {
+
+        @Override
+        public CompletableFuture<Suggestions> getSuggestions(CommandContext ctx, SuggestionsBuilder builder) throws CommandSyntaxException {
+            gameManager.getTeams().stream().map(DLDSTeam::getName)
+                    .filter(entry -> entry.toLowerCase().startsWith(builder.getRemainingLowerCase()))
+                    .forEach(builder::suggest);
+            return builder.buildFuture();
+        }
+    }
+
+
 
 }

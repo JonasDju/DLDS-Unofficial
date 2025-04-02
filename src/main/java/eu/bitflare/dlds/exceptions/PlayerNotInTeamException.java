@@ -22,12 +22,17 @@ public class PlayerNotInTeamException extends DLDSException {
 
     @Override
     public Component errorMessage() {
-        return chatPrefix(scoreboardHeader)
+        Component res =  chatPrefix(scoreboardHeader)
                 .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
                 .append(text("Player ", LIGHT_GREY))
-                .append(text(player.getName(), LIGHT_GREEN))
-                .append(text(" is not part of the team ", LIGHT_GREY))
-                .append(text(team.getName(), LIGHT_BLUE))
-                .append(text("!", LIGHT_GREY));
+                .append(text(player.getName(), LIGHT_GREEN));
+        if(team != null) {
+            res = res.append(text(" is not part of the team ", LIGHT_GREY))
+                    .append(text(team.getName(), LIGHT_BLUE))
+                    .append(text("!", LIGHT_GREY));
+        } else {
+            res = res.append(text(" is not part a team!", LIGHT_GREY));
+        }
+        return res;
     }
 }

@@ -8,6 +8,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class FileManager {
@@ -30,8 +31,7 @@ public class FileManager {
             }
 
             GameState state = new GameState(
-                    gameManager.getPlayers(),
-                    gameManager.isGameRunning(),
+                    gameManager.getTeams(),
                     gameManager.getDragonRespawnTime()
             );
 
@@ -56,8 +56,7 @@ public class FileManager {
 
             long dragonRespawnTime = state.getDragonRespawnTime();
 
-            gameManager.setGameRunning(state.isGameRunning());
-            gameManager.setPlayers(state.getRegisteredPlayers());
+            gameManager.setTeams(state.getTeams());
             gameManager.setDragonRespawnTime(dragonRespawnTime == 0 ? Long.MAX_VALUE : dragonRespawnTime);
         } catch (IOException e) {
             e.printStackTrace();
@@ -66,22 +65,16 @@ public class FileManager {
 
     public class GameState {
 
-        private final Map<UUID, PlayerData> registeredPlayers;
-        private final boolean isGameRunning;
+        private final Set<DLDSTeam> teams;
         private final long dragonRespawnTime;
 
-        public GameState(Map<UUID, PlayerData> registeredPlayers, boolean isGameRunning, long dragonRespawnTime) {
-            this.registeredPlayers = registeredPlayers;
-            this.isGameRunning = isGameRunning;
+        public GameState(Set<DLDSTeam> teams, long dragonRespawnTime) {
+            this.teams = teams;
             this.dragonRespawnTime = dragonRespawnTime;
         }
 
-        public Map<UUID, PlayerData> getRegisteredPlayers() {
-            return registeredPlayers;
-        }
-
-        public boolean isGameRunning() {
-            return isGameRunning;
+        public Set<DLDSTeam> getTeams() {
+            return teams;
         }
 
         public long getDragonRespawnTime() {
