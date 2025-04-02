@@ -67,10 +67,11 @@ public class DLDSTeam {
         // Check if all players of the team are online
         if(getOnlinePlayers().size() != players.size()) {
             // Get list of players that are part of the team but not contained in the result of getOnlinePlayers()
-            List<Player> offlinePlayers = players.stream().filter(pd ->
+            List<String> offlinePlayerNames = players.stream().filter(pd ->
                     !getOnlinePlayers().stream().map(Entity::getUniqueId).toList().contains(pd.getUuid())
-            ).map(pd -> Bukkit.getPlayer(pd.getUuid())).toList();
-            throw new SomePlayersAreOfflineException(offlinePlayers, this);
+            ).map(PlayerData::getPlayerName).toList();
+            isPlaying = false;
+            throw new SomePlayersAreOfflineException(offlinePlayerNames, this);
         }
 
         GameManager gameManager = GameManager.getInstance();
@@ -212,6 +213,7 @@ public class DLDSTeam {
                 ).reduce(0, Integer::sum)
         ).reduce(0, Integer::sum);
     }
+
 
     public int getAchievablePoints() {
         return GameManager.getInstance().getTotalAdvancementPoints() * players.size();

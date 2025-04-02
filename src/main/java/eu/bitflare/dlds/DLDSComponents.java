@@ -88,8 +88,8 @@ public class DLDSComponents {
     }
 
     // Leave message
-    public static Component playerQuitMessage(Player player) {
-        return chatPrefix(text("-", RED))
+    public static Component playerQuitMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("-", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 

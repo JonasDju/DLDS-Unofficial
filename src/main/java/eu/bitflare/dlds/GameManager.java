@@ -128,11 +128,16 @@ public class GameManager implements Listener {
         targetTeam.get().removePlayer(player);
     }
 
-    public void startGame(String teamName) throws TeamNotFoundException, TeamAlreadyPlayingException {
+    public void startGame(String teamName) throws TeamNotFoundException, TeamAlreadyPlayingException, SomePlayersAreOfflineException, EmptyTeamException {
         // Check if team even exists
         Optional<DLDSTeam> targetTeam = getTeam(teamName);
         if(targetTeam.isEmpty()) {
             throw new TeamNotFoundException(teamName);
+        }
+
+        // Check if the team is empty
+        if(targetTeam.get().getPlayers().isEmpty()) {
+            throw new EmptyTeamException(targetTeam.get());
         }
 
         // Change world settings if this is the first team to start playing
@@ -333,7 +338,7 @@ public class GameManager implements Listener {
         }
 
         // Normal quit message
-        event.quitMessage(DLDSComponents.playerQuitMessage(player));
+        event.quitMessage(DLDSComponents.playerQuitMessage(player, team.orElse(null)));
     }
 
     @EventHandler
@@ -364,10 +369,7 @@ public class GameManager implements Listener {
         PlayerData playerData = playerDataOpt.get();
 
         // Check if anyone else in the players' team has this advancement
-        boolean isFirst = team.hasAdvancement(advancementKey);
-
-        // Add advancement to players' list
-        playerData.getEarnedAdvancements().add(advancementKey);
+        boolean isFirst = !team.hasAdvancement(advancementKey);
 
         // Read rewards from configuration file
         ConfigurationSection rewardSection = getRewardsSection(advancement);
@@ -376,6 +378,9 @@ public class GameManager implements Listener {
                     player.displayName(), advancement.getDisplay().title(), advancement.getKey().asString());
             return;
         }
+
+        // Add advancement to players' list
+        playerData.getEarnedAdvancements().add(advancementKey);
 
         // Give rewards if first
         if(isFirst) {
