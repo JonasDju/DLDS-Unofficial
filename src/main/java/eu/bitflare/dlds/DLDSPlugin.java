@@ -13,11 +13,11 @@ import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSele
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -38,19 +38,6 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
     @SuppressWarnings("UnstableApiUsage")
     LiteralCommandNode<CommandSourceStack> dldsCommand = Commands.literal("dlds")
-            .then(Commands.literal("enter")
-                    .executes(ctx -> {
-                        CommandSender sender = ctx.getSource().getSender();
-                        Entity executor = ctx.getSource().getExecutor();
-
-                        if(!(executor instanceof Player player)) {
-                            sender.sendMessage(DLDSComponents.mustBePlayer());
-                            return Command.SINGLE_SUCCESS;
-                        }
-
-                        gameManager.registerPlayer(player);
-                        return Command.SINGLE_SUCCESS;
-                    }))
             .then(Commands.literal("start")
                     .executes(ctx -> {
                         if(gameManager.getPlayers().isEmpty()){
@@ -169,7 +156,15 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
                                                 try {
                                                     gameManager.addPlayerToTeam(player, teamName);
-                                                    sender.sendMessage(DLDSComponents.teamAddPlayerSuccess(player, teamName));
+                                                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+                                                    player.sendMessage(DLDSComponents.youWereAdded(teamName));
+
+                                                    // Send confirmation message to sender if the sender is not the player that was added to a team
+                                                    if(ctx.getSource().getExecutor() instanceof Player playerExecutor
+                                                        && !playerExecutor.getUniqueId().equals(player.getUniqueId())) {
+                                                        sender.sendMessage(DLDSComponents.teamAddPlayerSuccess(player, teamName));
+                                                    }
+
                                                 } catch (DLDSException e) {
                                                     sender.sendMessage(e.errorMessage());
                                                     gameManager.playErrorSound(ctx.getSource().getExecutor());
@@ -197,7 +192,14 @@ public class DLDSPlugin extends JavaPlugin implements Listener {
 
                                                 try {
                                                     gameManager.removePlayerFromTeam(player, teamName);
-                                                    sender.sendMessage(DLDSComponents.teamRemovePlayerSuccess(player, teamName));
+                                                    player.sendMessage(DLDSComponents.youWereRemoved(teamName));
+
+                                                    // Send confirmation message to sender if the sender is not the player that was removed from the team
+                                                    if(ctx.getSource().getExecutor() instanceof Player playerExecutor
+                                                            && !playerExecutor.getUniqueId().equals(player.getUniqueId())) {
+                                                        sender.sendMessage(DLDSComponents.teamRemovePlayerSuccess(player, teamName));
+                                                    }
+
                                                 } catch (DLDSException e) {
                                                     sender.sendMessage(e.errorMessage());
                                                     gameManager.playErrorSound(ctx.getSource().getExecutor());

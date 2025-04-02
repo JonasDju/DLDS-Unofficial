@@ -126,24 +126,6 @@ public class GameManager implements Listener {
         targetTeam.get().removePlayer(player);
     }
 
-    public void registerPlayer(Player player) {
-        if(isGameRunning) {
-            player.sendMessage(DLDSComponents.registerGameAlradyRunning());
-            playErrorSound(player);
-            return;
-        }
-
-        UUID uuid = player.getUniqueId();
-        if(players.containsKey(uuid)) {
-            player.sendMessage(DLDSComponents.registerAlreadyRegistered());
-            playErrorSound(player);
-        } else {
-            players.put(uuid, new PlayerData(player));
-            player.sendMessage(DLDSComponents.registerSuccess());
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
-        }
-    }
-
     public boolean startGame() {
         if(isGameRunning) {
             return false;

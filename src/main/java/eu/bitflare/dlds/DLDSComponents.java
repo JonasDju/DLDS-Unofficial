@@ -297,12 +297,28 @@ public class DLDSComponents {
                 .append(text("!", LIGHT_GREY));
     }
 
+    // team -> addplayer -> you were added
+    public static Component youWereAdded(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("You were added to the team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
     // team -> removeplayer -> success
     public static Component teamRemovePlayerSuccess(Player player, String teamName) {
         return chatPrefix(scoreboardHeader)
                 .append(text("Successfully removed player ", LIGHT_GREY))
                 .append(text(player.getName(), LIGHT_GREEN))
                 .append(text(" from team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> removeplayer -> you were removed
+    public static Component youWereRemoved(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("You were removed from team ", LIGHT_GREY))
                 .append(text(teamName, LIGHT_BLUE))
                 .append(text("!", LIGHT_GREY));
     }
