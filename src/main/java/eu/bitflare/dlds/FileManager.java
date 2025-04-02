@@ -23,15 +23,16 @@ public class FileManager {
     }
 
     public void saveGameState() {
+        GameManager gameManager = GameManager.getInstance();
         try {
             if (!plugin.getDataFolder().exists()) {
                 plugin.getDataFolder().mkdir();
             }
 
             GameState state = new GameState(
-                    plugin.getGameManager().getPlayers(),
-                    plugin.getGameManager().isGameRunning(),
-                    plugin.getGameManager().getDragonRespawnTime()
+                    gameManager.getPlayers(),
+                    gameManager.isGameRunning(),
+                    gameManager.getDragonRespawnTime()
             );
 
             FileWriter writer = new FileWriter(saveFile);
@@ -43,6 +44,7 @@ public class FileManager {
     }
 
     public void loadGameState() {
+        GameManager gameManager = GameManager.getInstance();
         if (!saveFile.exists()) {
             return;
         }
@@ -54,9 +56,9 @@ public class FileManager {
 
             long dragonRespawnTime = state.getDragonRespawnTime();
 
-            plugin.getGameManager().setGameRunning(state.isGameRunning());
-            plugin.getGameManager().setPlayers(state.getRegisteredPlayers());
-            plugin.getGameManager().setDragonRespawnTime(dragonRespawnTime == 0 ? Long.MAX_VALUE : dragonRespawnTime);
+            gameManager.setGameRunning(state.isGameRunning());
+            gameManager.setPlayers(state.getRegisteredPlayers());
+            gameManager.setDragonRespawnTime(dragonRespawnTime == 0 ? Long.MAX_VALUE : dragonRespawnTime);
         } catch (IOException e) {
             e.printStackTrace();
         }

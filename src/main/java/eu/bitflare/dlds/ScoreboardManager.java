@@ -35,14 +35,15 @@ public class ScoreboardManager implements Listener {
     }
 
     private void updateBoard(FastBoard board) {
-        int currentPoints = plugin.getGameManager().getCurrentPoints();
-        int maxPoints = plugin.getGameManager().getMaxPoints();
+        GameManager gameManager = GameManager.getInstance();
+        int currentPoints = gameManager.getCurrentPoints();
+        int maxPoints = gameManager.getMaxPoints();
 
-        int currentAdvancements = plugin.getGameManager().getCurrentAdvancementAmount();
-        int maxAdvancements = plugin.getGameManager().getMaxAdvancementAmount();
+        int currentAdvancements = gameManager.getCurrentAdvancementAmount();
+        int maxAdvancements = gameManager.getMaxAdvancementAmount();
 
         UUID playerId = board.getPlayer().getUniqueId();
-        long remainingTime = plugin.getGameManager().getPlayers().get(playerId).getRemainingTime();
+        long remainingTime = gameManager.getPlayers().get(playerId).getRemainingTime();
 
         board.updateLines(
                 Component.text("Remaining Time").color(DLDSColor.LIGHT_GREY),
@@ -83,9 +84,10 @@ public class ScoreboardManager implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        GameManager gameManager = GameManager.getInstance();
         Player player = event.getPlayer();
 
-        if(plugin.getGameManager().getRegisteredUUIDs().contains(player.getUniqueId()) && plugin.getGameManager().isGameRunning()) {
+        if(gameManager.getRegisteredUUIDs().contains(player.getUniqueId()) && gameManager.isGameRunning()) {
             createBoardForPlayers(player);
         }
     }

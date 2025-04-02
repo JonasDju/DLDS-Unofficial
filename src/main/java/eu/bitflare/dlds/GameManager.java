@@ -32,6 +32,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.OminousBottleMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
@@ -47,7 +48,9 @@ import static net.kyori.adventure.text.Component.text;
 
 public class GameManager implements Listener {
 
-    private final DLDSPlugin plugin;
+    private static GameManager instance;
+
+    private DLDSPlugin plugin;
     private Map<UUID, PlayerData> players;
     private Set<DLDSTeam> teams;
     private boolean isGameRunning;
@@ -55,21 +58,29 @@ public class GameManager implements Listener {
     private boolean isCountdownRunning;
     private long dragonRespawnTime;
 
-    private final int totalAdvancementPoints;
-    private final int totalAdvancementCount;
+    private int totalAdvancementPoints;
+    private int totalAdvancementCount;
 
-    public GameManager(DLDSPlugin plugin) {
-        this.plugin = plugin;
+    private GameManager() {
         this.players = new HashMap<>();
         this.teams = new HashSet<>();
         this.isGameRunning = false;
         this.isTimerRunning = false;
         this.isCountdownRunning = false;
         this.dragonRespawnTime = Long.MAX_VALUE;
+    }
 
+    public static synchronized GameManager getInstance() {
+        if (instance == null) {
+            instance = new GameManager();
+        }
+        return instance;
+    }
+
+    public void init(DLDSPlugin plugin) {
+        this.plugin = plugin;
         this.totalAdvancementPoints = computeTotalAdvancementPoints();
         this.totalAdvancementCount = computeTotalAdvancementCount();
-
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
