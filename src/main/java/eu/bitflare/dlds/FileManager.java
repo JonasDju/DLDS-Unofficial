@@ -34,7 +34,7 @@ public class FileManager {
             GameState state = new GameState(
                     gameManager.getTeams(),
                     gameManager.getDragonRespawnTime(),
-                    new ComparableVersion(plugin.getPluginMeta().getVersion())
+                    plugin.getPluginMeta().getVersion()
             );
 
             FileWriter writer = new FileWriter(saveFile);
@@ -69,9 +69,9 @@ public class FileManager {
 
         private final Set<DLDSTeam> teams;
         private final long dragonRespawnTime;
-        private ComparableVersion pluginVersion;
+        private final String pluginVersion;
 
-        public GameState(Set<DLDSTeam> teams, long dragonRespawnTime, ComparableVersion pluginVersion) {
+        public GameState(Set<DLDSTeam> teams, long dragonRespawnTime, String pluginVersion) {
             this.teams = teams;
             this.dragonRespawnTime = dragonRespawnTime;
             this.pluginVersion = pluginVersion;
@@ -85,7 +85,7 @@ public class FileManager {
             return dragonRespawnTime;
         }
 
-        public ComparableVersion getPluginVersion() {
+        public String getPluginVersion() {
             return pluginVersion;
         }
     }
