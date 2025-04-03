@@ -1,6 +1,7 @@
 package eu.bitflare.dlds;
 
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -14,9 +15,9 @@ public class PlayerData {
     private boolean isDead;
     private Set<NamespacedKey> earnedAdvancements;
 
-    public PlayerData(UUID uuid, String playerName) {
-        this.uuid = uuid;
-        this.playerName = playerName;
+    public PlayerData(Player player) {
+        this.uuid = player.getUniqueId();
+        this.playerName = player.getName();
         this.remainingTime = 12 * 60 * 60;
         this.isDead = false;
         this.earnedAdvancements = new HashSet<>();
