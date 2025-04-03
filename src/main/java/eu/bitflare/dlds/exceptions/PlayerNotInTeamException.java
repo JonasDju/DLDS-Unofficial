@@ -31,7 +31,9 @@ public class PlayerNotInTeamException extends DLDSException {
                     .append(text(team.getName(), LIGHT_BLUE))
                     .append(text("!", LIGHT_GREY));
         } else {
-            res = res.append(text(" is not part a team!", LIGHT_GREY));
+            res = res.append(text(" is ", LIGHT_GREY))
+                    .append(text("not part a team", RED))
+                    .append(text("!", LIGHT_GREY));
         }
         return res;
     }

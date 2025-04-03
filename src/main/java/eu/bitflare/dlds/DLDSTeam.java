@@ -150,6 +150,7 @@ public class DLDSTeam {
                         // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP, ...
                         for(PlayerData playerData : players) {
                             playerData.setRemainingTime(gameManager.getPlugin().getConfig().getLong("playtime"));
+                            playerData.getEarnedAdvancements().clear();
 
                             Player player = Bukkit.getPlayer(playerData.getUuid());
 
@@ -273,6 +274,10 @@ public class DLDSTeam {
 
     public boolean isPlaying() {
         return isPlaying;
+    }
+
+    public void setPlaying(boolean playing) {
+        isPlaying = playing;
     }
 
     public boolean isCountdownRunning() {

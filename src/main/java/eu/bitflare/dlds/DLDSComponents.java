@@ -1,6 +1,8 @@
 package eu.bitflare.dlds;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
@@ -190,16 +192,22 @@ public class DLDSComponents {
 
     // start -> help
     public static Component startHelp() {
+        String command = "/dlds start ";
         return chatPrefix(scoreboardHeader)
                 .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("/dlds start <teamname>", ORANGE));
+                .append(text(command + "<teamname>", ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand(command))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE))));
     }
 
     // stop -> help
     public static Component stopHelp() {
+        String command = "/dlds stop ";
         return chatPrefix(scoreboardHeader)
                 .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("/dlds stop <teamname>", ORANGE));
+                .append(text(command + "<teamname>", ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand(command))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE))));
     }
 
     // stop -> success

@@ -272,6 +272,16 @@ public class GameManager implements Listener {
     }
 
     @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+
+        // Prevent players from dropping items while their countdown is running
+        Optional<DLDSTeam> team = getTeam(event.getPlayer());
+        if(team.isPresent() && team.get().isCountdownRunning()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
     public void onJump(PlayerJumpEvent event) {
 
         // Prevent players from jumping while their countdown is running
