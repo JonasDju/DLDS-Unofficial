@@ -4,18 +4,17 @@ import eu.bitflare.dlds.DLDSTeam;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.entity.Player;
 
 import static eu.bitflare.dlds.DLDSColor.*;
 import static eu.bitflare.dlds.DLDSComponents.chatPrefix;
 import static eu.bitflare.dlds.DLDSComponents.scoreboardHeader;
 import static net.kyori.adventure.text.Component.text;
 
-public class TeamAlreadyPlayingException extends DLDSException{
+public class TeamCurrentlyPlayingException extends DLDSException{
 
     private DLDSTeam team;
 
-    public TeamAlreadyPlayingException(DLDSTeam team) {
+    public TeamCurrentlyPlayingException(DLDSTeam team) {
         this.team = team;
     }
 
@@ -26,7 +25,9 @@ public class TeamAlreadyPlayingException extends DLDSException{
                 .append(text("The team ", LIGHT_GREY))
                 .append(text(team.getName(), LIGHT_BLUE))
                 .append(text(" is ", LIGHT_GREY))
-                .append(text("already playing", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("currently playing", RED))
+                .append(text("! Use ", LIGHT_GREY))
+                .append(text("/dlds stop " + team.getName(), ORANGE))
+                .append(text(" to stop their game.", LIGHT_GREY));
     }
 }

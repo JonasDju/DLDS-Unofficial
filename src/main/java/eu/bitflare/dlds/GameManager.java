@@ -87,48 +87,54 @@ public class GameManager implements Listener {
             throw new TeamNotFoundException(teamName);
         }
 
+        // Check if the team is currently playing
+        if(team.get().isPlaying()) {
+            throw new TeamCurrentlyPlayingException(team.get());
+        }
+
         teams.remove(team.get());
     }
 
-    public void addPlayerToTeam(Player player, String teamName) throws TeamNotFoundException, PlayerAlreadyInTeamException, TeamAlreadyPlayingException {
+    public void addPlayerToTeam(Player player, String teamName) throws TeamNotFoundException, TeamCurrentlyPlayingException {
         // Check if team exists
         Optional<DLDSTeam> targetTeam = getTeam(teamName);
         if(targetTeam.isEmpty()) {
             throw new TeamNotFoundException(teamName);
         }
 
-        // Check if player is currently in another team
-        Optional<DLDSTeam> currentTeam = getTeam(player);
-        if(currentTeam.isPresent()) {
-            throw new PlayerAlreadyInTeamException(player, currentTeam.get());
-        }
-
         // Check if team is already playing
         if(targetTeam.get().isPlaying()) {
-            throw new TeamAlreadyPlayingException(targetTeam.get());
+            throw new TeamCurrentlyPlayingException(targetTeam.get());
+        }
+
+        // Remove player from current team (if applicable)
+        Optional<DLDSTeam> currentTeam = getTeam(player);
+        if(currentTeam.isPresent()) {
+            if(currentTeam.get().isPlaying()) {
+                throw new TeamCurrentlyPlayingException(currentTeam.get());
+            }
+            currentTeam.get().removePlayer(player);
         }
 
         // Add player to team
         targetTeam.get().addPlayer(player);
     }
 
-    public void removePlayerFromTeam(Player player, String teamName) throws TeamNotFoundException, PlayerNotInTeamException {
-        // Check if team even exists
-        Optional<DLDSTeam> targetTeam = getTeam(teamName);
-        if(targetTeam.isEmpty()) {
-            throw new TeamNotFoundException(teamName);
+    public DLDSTeam removePlayerFromTeams(Player player) throws PlayerNotInTeamException, TeamCurrentlyPlayingException {
+        Optional<DLDSTeam> team = getTeam(player);
+        if(team.isPresent()) {
+            if(team.get().isPlaying()) {
+                throw new TeamCurrentlyPlayingException(team.get());
+            } else {
+                team.get().removePlayer(player);
+                return team.get();
+            }
+        } else {
+            throw new PlayerNotInTeamException(player, null);
         }
-
-        // Check if player even is in the team
-        if(!targetTeam.get().containsPlayer(player)) {
-            throw new PlayerNotInTeamException(player, targetTeam.get());
-        }
-
-        // Remove player from team
-        targetTeam.get().removePlayer(player);
     }
 
-    public void startGame(String teamName) throws TeamNotFoundException, TeamAlreadyPlayingException, SomePlayersAreOfflineException, EmptyTeamException {
+    public void startGame(String teamName) throws TeamNotFoundException, TeamCurrentlyPlayingException, SomePlayersAreOfflineException, EmptyTeamException {
         // Check if team even exists
         Optional<DLDSTeam> targetTeam = getTeam(teamName);
         if(targetTeam.isEmpty()) {

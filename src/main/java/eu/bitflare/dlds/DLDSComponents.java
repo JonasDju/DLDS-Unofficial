@@ -4,12 +4,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.text;
@@ -183,54 +180,70 @@ public class DLDSComponents {
         );
     }
 
-    // start -> no players
-    public static Component startNoPlayers() {
+    // start -> success
+    public static Component startSuccess(String teamName) {
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("No players", RED))
-                .append(text(" have entered yet! Use ", LIGHT_GREY))
-                .append(text("/dlds enter", ORANGE))
-                .append(text(" to enter the game!", LIGHT_GREY));
-    }
-
-    // start -> already running
-    public static Component startAlreadyRunning() {
-        return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("DLDS is", RED))
-                .append(text("already running", RED))
+                .append(text("Successfully started the game for team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
                 .append(text("!", LIGHT_GREY));
     }
 
-    // stop -> not started
-    public static Component stopNotStarted() {
+    // start -> help
+    public static Component startHelp() {
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("DLDS has ", LIGHT_GREY))
-                .append(text("not started yet", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                .append(text("/dlds start <teamname>", ORANGE));
+    }
+
+    // stop -> help
+    public static Component stopHelp() {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                .append(text("/dlds stop <teamname>", ORANGE));
     }
 
     // stop -> success
-    public static Component stopSuccess() {
-        return chatPrefix(scoreboardHeader).append(text()
-                .color(LIGHT_GREY)
-                .content("DLDS ")
-                .append(text("has been stopped", LIGHT_GREEN))
-                .append(text("!", LIGHT_GREY))
-                .build()
-        );
+    public static Component stopSuccess(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully stopped the game for team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
     }
 
-    // time -> player not found / registered
-    public static Component timePlayerNotFound(Player player) {
+    // your game was stopped
+    public static Component yourGameWasStopped() {
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("The player ", LIGHT_GREY))
-                .append(text(player.getName(), LIGHT_GREEN))
-                .append(text(" is ", LIGHT_GREY))
-                .append(text("not registered", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("Your game has been stopped!", LIGHT_GREY));
+    }
+
+    // leaderboard
+    public static Component leaderboard(List<DLDSTeam> teams) {
+        if(teams.isEmpty()) {
+            return chatPrefix(scoreboardHeader)
+                    .append(text("There are currently ", LIGHT_GREY))
+                    .append(text("no teams", RED))
+                    .append(text("!", LIGHT_GREY));
+        }
+
+        Component result = empty()
+                .append(longMessageHeader)
+                .appendNewline()
+                .append(text("Leaderboard:", LIGHT_GREY))
+                .appendNewline();
+
+        int counter = 1;
+        for(DLDSTeam team : teams) {
+            float percentage = 100f * team.getCurrentPoints() / team.getAchievablePoints();
+            result = result
+                    .append(text("  " + " ".repeat(counter < 10 ? 1 : 0), LIGHT_GREY))
+                    .append(text(counter + ". ", LIGHT_GREY))
+                    .append(text(team.getName(), LIGHT_BLUE))
+                    .append(text(" " + team.getCurrentPoints() + "/" + team.getAchievablePoints(), YELLOW))
+                    .append(text(" (" + String.format("%.0f", percentage) + "%)", LIGHT_GREY))
+                    .appendNewline();
+            counter++;
+        }
+        return result.append(longMessageFooter);
     }
 
     // time -> success

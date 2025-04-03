@@ -27,6 +27,8 @@ public class EmptyTeamException extends DLDSException {
                 .append(text("The team ", LIGHT_GREY))
                 .append(text(team.getName(), LIGHT_BLUE))
                 .append(text(" is empty", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("! Use ", LIGHT_GREY))
+                .append(text("/dlds team addplayer <playername> " + team.getName(), ORANGE))
+                .append(text(" to add someone to the team!", LIGHT_GREY));
     }
 }

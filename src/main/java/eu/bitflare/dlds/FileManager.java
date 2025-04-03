@@ -2,6 +2,7 @@ package eu.bitflare.dlds;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.maven.artifact.versioning.ComparableVersion;
 
 import java.io.File;
 import java.io.FileReader;
@@ -32,7 +33,8 @@ public class FileManager {
 
             GameState state = new GameState(
                     gameManager.getTeams(),
-                    gameManager.getDragonRespawnTime()
+                    gameManager.getDragonRespawnTime(),
+                    new ComparableVersion(plugin.getPluginMeta().getVersion())
             );
 
             FileWriter writer = new FileWriter(saveFile);
@@ -67,10 +69,12 @@ public class FileManager {
 
         private final Set<DLDSTeam> teams;
         private final long dragonRespawnTime;
+        private ComparableVersion pluginVersion;
 
-        public GameState(Set<DLDSTeam> teams, long dragonRespawnTime) {
+        public GameState(Set<DLDSTeam> teams, long dragonRespawnTime, ComparableVersion pluginVersion) {
             this.teams = teams;
             this.dragonRespawnTime = dragonRespawnTime;
+            this.pluginVersion = pluginVersion;
         }
 
         public Set<DLDSTeam> getTeams() {
@@ -81,6 +85,9 @@ public class FileManager {
             return dragonRespawnTime;
         }
 
+        public ComparableVersion getPluginVersion() {
+            return pluginVersion;
+        }
     }
 
 

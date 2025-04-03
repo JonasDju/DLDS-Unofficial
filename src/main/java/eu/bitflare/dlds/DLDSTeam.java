@@ -1,7 +1,7 @@
 package eu.bitflare.dlds;
 
 import eu.bitflare.dlds.exceptions.SomePlayersAreOfflineException;
-import eu.bitflare.dlds.exceptions.TeamAlreadyPlayingException;
+import eu.bitflare.dlds.exceptions.TeamCurrentlyPlayingException;
 import eu.bitflare.dlds.exceptions.TeamNotPlayingException;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
@@ -60,7 +60,7 @@ public class DLDSTeam {
     public void startGame() {
         // Ignore call if the team is already playing
         if(isPlaying) {
-            throw new TeamAlreadyPlayingException(this);
+            throw new TeamCurrentlyPlayingException(this);
         }
         isPlaying = true;
 
@@ -178,7 +178,7 @@ public class DLDSTeam {
         }
         isPlaying = false;
 
-        broadcastMessage(DLDSComponents.stopSuccess());
+        broadcastMessage(DLDSComponents.yourGameWasStopped());
 
         GameManager gameManager = GameManager.getInstance();
         for(Player player : getOnlinePlayers()) {

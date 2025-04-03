@@ -29,6 +29,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static net.kyori.adventure.text.Component.text;
@@ -46,6 +47,10 @@ public class DLDSPlugin extends JavaPlugin {
     @SuppressWarnings("UnstableApiUsage")
     LiteralCommandNode<CommandSourceStack> dldsCommand = Commands.literal("dlds")
             .then(Commands.literal("start")
+                    .executes(ctx -> {
+                        ctx.getSource().getSender().sendMessage(DLDSComponents.startHelp());
+                        return Command.SINGLE_SUCCESS;
+                    })
                     .then(Commands.argument("teamname", StringArgumentType.word())
                             .suggests(teamSuggestionProvider)
                             .executes(ctx -> {
@@ -54,6 +59,17 @@ public class DLDSPlugin extends JavaPlugin {
 
                                 try {
                                     gameManager.startGame(teamName);
+
+                                    // If the sender is not a player or the sender is a player that is not inside the respective team, send a confirmation message
+                                    if(!(ctx.getSource().getExecutor() instanceof Player player)) {
+                                        sender.sendMessage(DLDSComponents.startSuccess(teamName));
+                                    } else {
+                                        Optional<DLDSTeam> team = gameManager.getTeam(player);
+                                        if(team.isEmpty() || !team.get().getName().equals(teamName)) {
+                                            sender.sendMessage(DLDSComponents.startSuccess(teamName));
+                                        }
+                                    }
+
                                 } catch (DLDSException e) {
                                     sender.sendMessage(e.errorMessage());
                                     gameManager.playErrorSound(ctx.getSource().getExecutor());
@@ -62,6 +78,10 @@ public class DLDSPlugin extends JavaPlugin {
                             })
                     ))
             .then(Commands.literal("stop")
+                    .executes(ctx -> {
+                        ctx.getSource().getSender().sendMessage(DLDSComponents.stopHelp());
+                        return Command.SINGLE_SUCCESS;
+                    })
                     .then(Commands.argument("teamname", StringArgumentType.word())
                             .suggests(teamSuggestionProvider)
                             .executes(ctx -> {
@@ -70,6 +90,17 @@ public class DLDSPlugin extends JavaPlugin {
 
                                 try {
                                     gameManager.stopGame(teamName);
+
+                                    // If the sender is not a player or the sender is a player that is not inside the respective team, send a confirmation message
+                                    if(!(ctx.getSource().getExecutor() instanceof Player player)) {
+                                        sender.sendMessage(DLDSComponents.stopSuccess(teamName));
+                                    } else {
+                                        Optional<DLDSTeam> team = gameManager.getTeam(player);
+                                        if(team.isEmpty() || !team.get().getName().equals(teamName)) {
+                                            sender.sendMessage(DLDSComponents.stopSuccess(teamName));
+                                        }
+                                    }
+
                                 } catch (DLDSException e) {
                                     sender.sendMessage(e.errorMessage());
                                     gameManager.playErrorSound(ctx.getSource().getExecutor());
@@ -185,34 +216,46 @@ public class DLDSPlugin extends JavaPlugin {
                     )
                     .then(Commands.literal("removeplayer")
                             .then(Commands.argument("player", ArgumentTypes.player())
-                                    .then(Commands.argument("teamname", StringArgumentType.word())
-                                            .suggests(teamSuggestionProvider)
-                                            .executes(ctx -> {
-                                                CommandSender sender = ctx.getSource().getSender();
-                                                final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
-                                                final Player player = targetResolver.resolve(ctx.getSource()).getFirst();
-                                                final String teamName = StringArgumentType.getString(ctx, "teamname");
+                                    .executes(ctx -> {
+                                        CommandSender sender = ctx.getSource().getSender();
+                                        final PlayerSelectorArgumentResolver targetResolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                        final Player player = targetResolver.resolve(ctx.getSource()).getFirst();
 
-                                                try {
-                                                    gameManager.removePlayerFromTeam(player, teamName);
-                                                    player.sendMessage(DLDSComponents.youWereRemoved(teamName));
+                                        try {
+                                            DLDSTeam removedFrom = gameManager.removePlayerFromTeams(player);
+                                            player.sendMessage(DLDSComponents.youWereRemoved(removedFrom.getName()));
 
-                                                    // Send confirmation message to sender if the sender is not the player that was removed from the team
-                                                    if(ctx.getSource().getExecutor() instanceof Player playerExecutor
-                                                            && !playerExecutor.getUniqueId().equals(player.getUniqueId())) {
-                                                        sender.sendMessage(DLDSComponents.teamRemovePlayerSuccess(player, teamName));
-                                                    }
+                                            // Send confirmation message to sender if the sender is not the player that was removed from the team
+                                            if(ctx.getSource().getExecutor() instanceof Player playerExecutor
+                                                    && !playerExecutor.getUniqueId().equals(player.getUniqueId())) {
+                                                sender.sendMessage(DLDSComponents.teamRemovePlayerSuccess(player, removedFrom.getName()));
+                                            }
 
-                                                } catch (DLDSException e) {
-                                                    sender.sendMessage(e.errorMessage());
-                                                    gameManager.playErrorSound(ctx.getSource().getExecutor());
-                                                }
+                                        } catch (DLDSException e) {
+                                            sender.sendMessage(e.errorMessage());
+                                            gameManager.playErrorSound(ctx.getSource().getExecutor());
+                                        }
 
-                                                return Command.SINGLE_SUCCESS;
-                                            })
-                                    )
+                                        return Command.SINGLE_SUCCESS;
+                                    })
                             )
                     )
+            )
+            .then(Commands.literal("leaderboard")
+                    .executes(ctx -> {
+
+                        List<DLDSTeam> leaderBoard = gameManager.getTeams().stream()
+                                .filter(team -> !team.getPlayers().isEmpty())
+                                .sorted((t1, t2) -> {
+                                    float percentage1 = (float) t1.getCurrentPoints() / t1.getCurrentPoints();
+                                    float percentage2 = (float) t2.getCurrentPoints() / t2.getCurrentPoints();
+                                    return Float.compare(percentage1, percentage2);
+                        }).toList();
+
+                        ctx.getSource().getSender().sendMessage(DLDSComponents.leaderboard(leaderBoard));
+
+                        return Command.SINGLE_SUCCESS;
+                    })
             )
             .executes(ctx -> {
                 ctx.getSource().getSender().sendMessage(DLDSComponents.helpMessage());
