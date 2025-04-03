@@ -596,13 +596,13 @@ public class GameManager implements Listener {
 
             // Teleport player to original random position if we could not find a suitable random offset
             if(tries == 5) {
-                player.teleport(location);
+                player.teleport(location.clone().add(0.5, 0, 0.5));
                 player.setRespawnLocation(location, true);
                 continue;
             }
 
             // Teleport player to random offset location
-            Location randomOffsetLoc = highestBlock.getLocation().add(0, 1, 0);
+            Location randomOffsetLoc = highestBlock.getLocation().add(0.5, 1, 0.5);
             player.teleport(randomOffsetLoc);
             player.setRespawnLocation(randomOffsetLoc, true);
         }
