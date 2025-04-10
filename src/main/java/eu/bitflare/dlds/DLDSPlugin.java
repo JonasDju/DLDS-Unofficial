@@ -247,9 +247,9 @@ public class DLDSPlugin extends JavaPlugin {
                         List<DLDSTeam> leaderBoard = gameManager.getTeams().stream()
                                 .filter(team -> !team.getPlayers().isEmpty())
                                 .sorted((t1, t2) -> {
-                                    float percentage1 = (float) t1.getCurrentPoints() / t1.getCurrentPoints();
-                                    float percentage2 = (float) t2.getCurrentPoints() / t2.getCurrentPoints();
-                                    return Float.compare(percentage1, percentage2);
+                                    float percentage1 = (float) t1.getCurrentPoints() / t1.getAchievablePoints();
+                                    float percentage2 = (float) t2.getCurrentPoints() / t2.getAchievablePoints();
+                                    return -Float.compare(percentage1, percentage2);
                         }).toList();
 
                         ctx.getSource().getSender().sendMessage(DLDSComponents.leaderboard(leaderBoard));

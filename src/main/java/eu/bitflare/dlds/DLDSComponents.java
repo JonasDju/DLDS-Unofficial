@@ -105,8 +105,8 @@ public class DLDSComponents {
     }
 
     // Timeout quit message
-    public static Component playerTimeoutQuitMessage(Player player) {
-        return chatPrefix(text("⌛", RED))
+    public static Component playerTimeoutQuitMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("⌛", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
@@ -229,8 +229,8 @@ public class DLDSComponents {
         if(teams.isEmpty()) {
             return chatPrefix(scoreboardHeader)
                     .append(text("There are currently ", LIGHT_GREY))
-                    .append(text("no teams", RED))
-                    .append(text("!", LIGHT_GREY));
+                    .append(text("no teams ", RED))
+                    .append(text("with players assigned!", LIGHT_GREY));
         }
 
         Component result = empty()

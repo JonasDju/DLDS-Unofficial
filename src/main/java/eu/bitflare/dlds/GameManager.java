@@ -146,8 +146,12 @@ public class GameManager implements Listener {
             throw new EmptyTeamException(targetTeam.get());
         }
 
+        // Start game for team
+        targetTeam.get().startGame();
+
         // Change world settings if this is the first team to start playing
-        if(!isGameRunning()) {
+        // This needs to happen after calling team.startGame() as this call could fail
+        if(getPlayingTeams().size() == 1) {
             World overworld = plugin.getServer().getWorlds().getFirst();
             int worldborderSize = plugin.getConfig().getInt("worldborder");
 
@@ -167,9 +171,6 @@ public class GameManager implements Listener {
             // Set time
             overworld.setTime(0);
         }
-
-        // Start game for team
-        targetTeam.get().startGame();
     }
 
     public void resetPlayer(Player player) {
@@ -263,9 +264,11 @@ public class GameManager implements Listener {
             }
 
             // Prevent "bystanders" from taking damage by the world border
-            if(team.isEmpty() && event.getCause().equals(EntityDamageEvent.DamageCause.WORLD_BORDER)) {
-                player.sendActionBar(text().content("You are outside the world border!").color(DLDSColor.RED));
-                event.setCancelled(true);
+            if(event.getCause().equals(EntityDamageEvent.DamageCause.WORLD_BORDER)) {
+                if(team.isEmpty() || !team.get().isPlaying()) {
+                    player.sendActionBar(text().content("You are outside the world border!").color(DLDSColor.RED));
+                    event.setCancelled(true);
+                }
             }
 
         }
@@ -340,7 +343,7 @@ public class GameManager implements Listener {
                 // If the player just ran out of time, send a custom quit message
                 if(plugin.getConfig().getBoolean("timeout_kick")
                         && (playerData.get().getRemainingTime() == 0L || playerData.get().getRemainingTime() == -1L)) {
-                    event.quitMessage(DLDSComponents.playerTimeoutQuitMessage(player));
+                    event.quitMessage(DLDSComponents.playerTimeoutQuitMessage(player, team.get()));
                     return;
                 }
 
@@ -850,6 +853,14 @@ public class GameManager implements Listener {
         if(playerData.isEmpty()) {
             // Player not in any team
             throw new PlayerNotInTeamException(player, null);
+        }
+
+        Optional<DLDSTeam> team = getTeam(player);
+        if(team.isPresent()) {
+            if(!team.get().isPlaying()) {
+                // Player in team but the team is not playing
+                throw new TeamNotPlayingException(team.get());
+            }
         }
 
         // Set remaining time
