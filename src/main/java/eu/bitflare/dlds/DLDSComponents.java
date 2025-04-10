@@ -145,7 +145,7 @@ public class DLDSComponents {
                         .clickEvent(ClickEvent.openUrl("https://github.com/JonasDju/DLDS-Unofficial?tab=readme-ov-file#usage"))
                         .hoverEvent(HoverEvent.showText(text("Click to open tutorial", WHITE)))
                 )
-                .append(text(" to view a tutorial on how to start the game.", LIGHT_GREY))
+                .append(text(" to view a tutorial.", LIGHT_GREY))
                 .appendNewline()
                 .append(longMessageFooter);
     }
