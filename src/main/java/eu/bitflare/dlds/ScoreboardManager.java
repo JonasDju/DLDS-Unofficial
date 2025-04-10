@@ -11,21 +11,18 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ScoreboardManager implements Listener {
 
-    private final DLDSPlugin plugin;
     private final Map<UUID, FastBoard> boards = new HashMap<>();
 
     public ScoreboardManager(DLDSPlugin plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
-        this.plugin = plugin;
 
         // Start repeating task to update boards
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::updateBoards, 0, 20);
-
-
     }
 
     public void updateBoards(){
@@ -35,31 +32,44 @@ public class ScoreboardManager implements Listener {
     }
 
     private void updateBoard(FastBoard board) {
-        int currentPoints = plugin.getGameManager().getCurrentPoints();
-        int maxPoints = plugin.getGameManager().getMaxPoints();
+        GameManager gameManager = GameManager.getInstance();
+        Player player = board.getPlayer();
+        Optional<DLDSTeam> teamOpt = gameManager.getTeam(player);
 
-        int currentAdvancements = plugin.getGameManager().getCurrentAdvancementAmount();
-        int maxAdvancements = plugin.getGameManager().getMaxAdvancementAmount();
+        // Only update board if player is part of a team and the team is playing
+        if (teamOpt.isPresent() && teamOpt.get().isPlaying()) {
+            DLDSTeam team = teamOpt.get();
 
-        UUID playerId = board.getPlayer().getUniqueId();
-        long remainingTime = plugin.getGameManager().getPlayers().get(playerId).getRemainingTime();
+            int currentPoints = team.getCurrentPoints();
+            int maxPoints = team.getAchievablePoints();
 
-        board.updateLines(
-                Component.text("Remaining Time").color(DLDSColor.LIGHT_GREY),
-                Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(DLDSComponents.formatTime(remainingTime)),
-                Component.text(""),
-                Component.text("Points").color(DLDSColor.LIGHT_GREY),
-                Component.text(" » ", DLDSColor.LIGHT_GREY).append(Component.text(currentPoints, DLDSColor.YELLOW))
-                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                        .append(Component.text(maxPoints, DLDSColor.YELLOW)),
-                Component.text(""),
-                Component.text("Advancements", DLDSColor.LIGHT_GREY),
-                Component.text().content(" » ").color(DLDSColor.LIGHT_GREY)
-                        .append(Component.text(currentAdvancements, DLDSColor.YELLOW))
-                        .append(Component.text(" / ", DLDSColor.DARK_GREY))
-                        .append(Component.text(maxAdvancements, DLDSColor.YELLOW))
-                        .build()
-        );
+            int currentAdvancements = team.getCurrentAdvancementAmount();
+            int maxAdvancements = team.getAchievableAdvancementAmount();
+
+            Optional<PlayerData> playerData = gameManager.getPlayerData(player);
+            long remainingTime = 0;
+            if(playerData.isPresent()) {
+                remainingTime = playerData.get().getRemainingTime();
+            }
+
+            board.updateLines(
+                    Component.text("Remaining Time").color(DLDSColor.LIGHT_GREY),
+                    Component.text(" » ").color(DLDSColor.LIGHT_GREY).append(DLDSComponents.formatTime(remainingTime)),
+                    Component.text(""),
+                    Component.text("Points").color(DLDSColor.LIGHT_GREY),
+                    Component.text(" » ", DLDSColor.LIGHT_GREY).append(Component.text(currentPoints, DLDSColor.YELLOW))
+                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                            .append(Component.text(maxPoints, DLDSColor.YELLOW)),
+                    Component.text(""),
+                    Component.text("Advancements", DLDSColor.LIGHT_GREY),
+                    Component.text().content(" » ").color(DLDSColor.LIGHT_GREY)
+                            .append(Component.text(currentAdvancements, DLDSColor.YELLOW))
+                            .append(Component.text(" / ", DLDSColor.DARK_GREY))
+                            .append(Component.text(maxAdvancements, DLDSColor.YELLOW))
+                            .build()
+            );
+        }
+
     }
 
     public void createBoardForPlayers(Player... players){
@@ -83,9 +93,11 @@ public class ScoreboardManager implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        GameManager gameManager = GameManager.getInstance();
         Player player = event.getPlayer();
+        Optional<DLDSTeam> teamOpt = gameManager.getTeam(player);
 
-        if(plugin.getGameManager().getRegisteredUUIDs().contains(player.getUniqueId()) && plugin.getGameManager().isGameRunning()) {
+        if(teamOpt.isPresent() && teamOpt.get().isPlaying()) {
             createBoardForPlayers(player);
         }
     }
@@ -100,9 +112,4 @@ public class ScoreboardManager implements Listener {
             board.delete();
         }
     }
-
-
-
-
-
 }

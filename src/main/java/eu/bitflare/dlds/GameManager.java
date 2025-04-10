@@ -1,14 +1,13 @@
 package eu.bitflare.dlds;
 
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import eu.bitflare.dlds.exceptions.*;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.Style;
-import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
@@ -28,173 +27,150 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.OminousBottleMeta;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-import java.time.Duration;
 import java.util.*;
 
 import static eu.bitflare.dlds.DLDSColor.DARK_GREY;
 import static eu.bitflare.dlds.DLDSColor.LIGHT_GREY;
+import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.text;
 
 public class GameManager implements Listener {
 
-    private final DLDSPlugin plugin;
-    private Map<UUID, PlayerData> players;
-    private boolean isGameRunning;
+    private static GameManager instance;
+
+    private DLDSPlugin plugin;
+    private Set<DLDSTeam> teams;
     private boolean isTimerRunning;
-    private boolean isCountdownRunning;
     private long dragonRespawnTime;
 
-    public GameManager(DLDSPlugin plugin) {
-        this.plugin = plugin;
-        this.players = new HashMap<>();
-        this.isGameRunning = false;
-        this.isTimerRunning = false;
-        this.isCountdownRunning = false;
-        this.dragonRespawnTime = Long.MAX_VALUE;
+    private int totalAdvancementPoints;
+    private int totalAdvancementCount;
 
+    private GameManager() {
+        this.teams = new HashSet<>();
+        this.isTimerRunning = false;
+        this.dragonRespawnTime = Long.MAX_VALUE;
+    }
+
+    public static synchronized GameManager getInstance() {
+        if (instance == null) {
+            instance = new GameManager();
+        }
+        return instance;
+    }
+
+    public void init(DLDSPlugin plugin) {
+        this.plugin = plugin;
+        this.totalAdvancementPoints = computeTotalAdvancementPoints();
+        this.totalAdvancementCount = computeTotalAdvancementCount();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    public void registerPlayer(Player player) {
-        if(isGameRunning) {
-            player.sendMessage(DLDSComponents.registerGameAlradyRunning());
-            playErrorSound(player);
-            return;
+    public void createTeam(String teamName) throws TeamAlreadyExistsException {
+        // Check if team already exists
+        Optional<DLDSTeam> team = getTeam(teamName);
+        if (team.isPresent()) {
+            throw new TeamAlreadyExistsException(team.get());
         }
 
-        UUID uuid = player.getUniqueId();
-        if(players.containsKey(uuid)) {
-            player.sendMessage(DLDSComponents.registerAlreadyRegistered());
-            playErrorSound(player);
+        teams.add(new DLDSTeam(teamName));
+    }
+
+    public void removeTeam(String teamName) throws TeamNotFoundException {
+        // Check if team even exists
+        Optional<DLDSTeam> team = getTeam(teamName);
+        if(team.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
+        }
+
+        // Check if the team is currently playing
+        if(team.get().isPlaying()) {
+            throw new TeamCurrentlyPlayingException(team.get());
+        }
+
+        teams.remove(team.get());
+    }
+
+    public void addPlayerToTeam(Player player, String teamName) throws TeamNotFoundException, TeamCurrentlyPlayingException {
+        // Check if team exists
+        Optional<DLDSTeam> targetTeam = getTeam(teamName);
+        if(targetTeam.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
+        }
+
+        // Check if team is already playing
+        if(targetTeam.get().isPlaying()) {
+            throw new TeamCurrentlyPlayingException(targetTeam.get());
+        }
+
+        // Remove player from current team (if applicable)
+        Optional<DLDSTeam> currentTeam = getTeam(player);
+        if(currentTeam.isPresent()) {
+            if(currentTeam.get().isPlaying()) {
+                throw new TeamCurrentlyPlayingException(currentTeam.get());
+            }
+            currentTeam.get().removePlayer(player);
+        }
+
+        // Add player to team
+        targetTeam.get().addPlayer(player);
+    }
+
+    public DLDSTeam removePlayerFromTeams(Player player) throws PlayerNotInTeamException, TeamCurrentlyPlayingException {
+        Optional<DLDSTeam> team = getTeam(player);
+        if(team.isPresent()) {
+            if(team.get().isPlaying()) {
+                throw new TeamCurrentlyPlayingException(team.get());
+            } else {
+                team.get().removePlayer(player);
+                return team.get();
+            }
         } else {
-            players.put(uuid, new PlayerData(uuid, player.getName()));
-            player.sendMessage(DLDSComponents.registerSuccess());
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
+            throw new PlayerNotInTeamException(player, null);
         }
     }
 
-    public boolean startGame() {
-        if(isGameRunning) {
-            return false;
+    public void startGame(String teamName) throws TeamNotFoundException, TeamCurrentlyPlayingException, SomePlayersAreOfflineException, EmptyTeamException {
+        // Check if team even exists
+        Optional<DLDSTeam> targetTeam = getTeam(teamName);
+        if(targetTeam.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
         }
-        isGameRunning = true;
 
-        World overworld = plugin.getServer().getWorlds().getFirst();
-        int worldborderSize = plugin.getConfig().getInt("worldborder");
+        // Check if the team is empty
+        if(targetTeam.get().getPlayers().isEmpty()) {
+            throw new EmptyTeamException(targetTeam.get());
+        }
 
+        // Start game for team
+        targetTeam.get().startGame();
 
-        // Get random spawn location and generate chunks
-        Location location = getRandomSpawnLocation(worldborderSize == 0 ? 10000 : worldborderSize/2.0);
-        int chunkX = location.getChunk().getX();
-        int chunkZ = location.getChunk().getZ();
-        for(int x = chunkX - 5; x < chunkX + 5; x++) {
-            for(int z = chunkZ - 5; z < chunkZ + 5; z++) {
-                overworld.getChunkAtAsync(x, z, true);
+        // Change world settings if this is the first team to start playing
+        // This needs to happen after calling team.startGame() as this call could fail
+        if(getPlayingTeams().size() == 1) {
+            World overworld = plugin.getServer().getWorlds().getFirst();
+            int worldborderSize = plugin.getConfig().getInt("worldborder");
+
+            // Set world border
+            if(worldborderSize > 0) {
+                WorldBorder border = overworld.getWorldBorder();
+                border.setCenter(0, 0);
+                border.setSize(worldborderSize);
             }
-        }
 
-
-        // Give blindness, slowness and play sound
-        for(Player player : getOnlineRegisteredPlayers()) {
-            player.setWalkSpeed(0);
-            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 20*13, 1, false, false));
-        }
-
-        // Show loading message
-        Component message = Component.text("The game will start soon!").color(DLDSColor.LIGHT_BLUE);
-        Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1));
-        broadcastTitleToRegisteredPlayers(message, Component.empty(), times);
-
-
-        // Start countdown and teleport players
-        isCountdownRunning = true;
-        new BukkitRunnable() {
-
-            private int countdown = 12;
-            private final Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(1), Duration.ofMillis(250));
-
-            @Override
-            public void run() {
-
-                switch (countdown) {
-                    case 11 -> {
-                        // Player sound shortly after countdown started
-                        for(Player player : getOnlineRegisteredPlayers()) {
-                            player.playSound(player.getLocation(), Sound.ENTITY_WARDEN_NEARBY_CLOSER, 1f, 1f);
-                        }
-                    }
-                    case 1, 2, 3, 4, 5 -> {
-                        // Teleport and reset players once countdown reaches 5
-                        if(countdown == 5) {
-                            teleportPlayers(location);
-                        }
-
-                        // Only show countdown and play notes for the last five seconds
-
-                        TextColor color = switch (countdown) {
-                            case 3 -> DLDSColor.ORANGE;
-                            case 2 -> DLDSColor.YELLOW;
-                            case 1 -> DLDSColor.LIGHT_GREEN;
-                            default -> DLDSColor.WHITE;
-                        };
-                        broadcastTitleToRegisteredPlayers(Component.text(countdown).color(color), Component.empty(), times);
-
-                        // Play note
-                        for (Player player : getOnlineRegisteredPlayers()) {
-                            player.playNote(location, Instrument.PIANO, Note.natural(0, Note.Tone.F));
-                        }
-                    }
-                    case 0 -> {
-
-                        // Set world border
-                        if(worldborderSize > 0) {
-                            WorldBorder border = overworld.getWorldBorder();
-                            border.setCenter(0, 0);
-                            border.setSize(worldborderSize);
-                        }
-
-                        // Set difficulty
-                        Difficulty difficulty = Difficulty.valueOf(plugin.getConfig().getString("difficulty"));
-                        for(World world : plugin.getServer().getWorlds()) {
-                            world.setDifficulty(difficulty);
-                        }
-
-                        // Set time
-                        overworld.setTime(0);
-
-                        // Send final title and sound
-                        broadcastTitleToRegisteredPlayers(Component.text("0").color(DLDSColor.RED), Component.empty(), times);
-                        for(Player player : getOnlineRegisteredPlayers()) {
-                            player.playNote(location, Instrument.PIANO, Note.natural(1, Note.Tone.F));
-                            player.playSound(location, Sound.BLOCK_NOTE_BLOCK_IMITATE_ENDER_DRAGON, 1.0F, 1.0F);
-                        }
-
-                        // Create Scoreboards for all registered players, clear their inventory, set gamemode to survival, and fill hunger / HP, ...
-                        for(Player player : getOnlineRegisteredPlayers()) {
-                            PlayerData playerData = players.get(player.getUniqueId());
-                            playerData.setRemainingTime(plugin.getConfig().getLong("playtime"));
-
-                            resetPlayer(player);
-
-                            // Create scoreboard
-                            plugin.getScoreboardManager().createBoardForPlayers(player);
-                        }
-                        isCountdownRunning = false;
-                        cancel();
-                    }
-                }
-
-                countdown--;
+            // Set difficulty
+            Difficulty difficulty = Difficulty.valueOf(plugin.getConfig().getString("difficulty"));
+            for(World world : plugin.getServer().getWorlds()) {
+                world.setDifficulty(difficulty);
             }
-        }.runTaskTimer(plugin, 0L, 20L);
 
-        return true;
+            // Set time
+            overworld.setTime(0);
+        }
     }
 
     public void resetPlayer(Player player) {
@@ -232,19 +208,19 @@ public class GameManager implements Listener {
         isTimerRunning = true;
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
 
-            if(isGameRunning) {
-                for (PlayerData playerData : players.values()) {
+            for(DLDSTeam team : getPlayingTeams()) {
+                for(PlayerData playerData : team.getPlayers()) {
                     Player player = plugin.getServer().getPlayer(playerData.getUuid());
-                    if (player != null && player.isOnline()) {
+                    if(player != null && player.isOnline()) {
 
                         if(playerData.getRemainingTime() == 0L && plugin.getConfig().getBoolean("timeout_kick")) {
                             plugin.getComponentLogger().info("{} has no time left and is kicked", player.getName());
 
-                            int currentPoints = getCurrentPoints();
-                            int maxPoints = getMaxPoints();
+                            int currentPoints = team.getCurrentPoints();
+                            int maxPoints = team.getAchievablePoints();
 
-                            int currentAdvancements = getCurrentAdvancementAmount();
-                            int maxAdvancements = getMaxAdvancementAmount();
+                            int currentAdvancements = team.getCurrentAdvancementAmount();
+                            int maxAdvancements = team.getAchievableAdvancementAmount();
 
                             player.kick(
                                     DLDSComponents.getPlayerTimeoutKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
@@ -253,64 +229,92 @@ public class GameManager implements Listener {
 
                         long remainingTime = playerData.getRemainingTime();
                         playerData.setRemainingTime(remainingTime - 1);
-
                     }
                 }
             }
         }, 0L, 20L);
     }
 
-    public boolean stopGame() {
-        if(!isGameRunning) {
-            return false;
+    public void stopGame(String teamName) throws TeamNotFoundException, TeamNotPlayingException {
+        // Check if team even exists
+        Optional<DLDSTeam> targetTeam = getTeam(teamName);
+        if(targetTeam.isEmpty()) {
+            throw new TeamNotFoundException(teamName);
         }
-        isGameRunning = false;
 
-        // Reset world border
-        World overworld = plugin.getServer().getWorlds().getFirst();
-        overworld.getWorldBorder().reset();
+        targetTeam.get().stopGame();
 
-        broadcastMessageToRegisteredPlayers(DLDSComponents.stopSuccess());
-
-        // Reset registered players
-        for(PlayerData playerData : players.values()) {
-            Player player = plugin.getServer().getPlayer(playerData.getUuid());
-            if(player != null) {
-                plugin.getScoreboardManager().deleteBoardForPlayers(player);
-                player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1F, 1F);
-            }
+        // Reset world if this was the last team playing
+        if(!isGameRunning()) {
+            World overworld = plugin.getServer().getWorlds().getFirst();
+            overworld.getWorldBorder().reset();
         }
-        this.players.clear();
-        return true;
     }
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
+
+        // Only consider events in which a player is damaged
         if(event.getEntity() instanceof Player player) {
-            if(players.containsKey(player.getUniqueId()) && isCountdownRunning) {
+
+            // Prevent players from taking damage while their countdown is running
+            Optional<DLDSTeam> team = getTeam(player);
+            if(team.isPresent() && team.get().isCountdownRunning()) {
                 event.setCancelled(true);
             }
+
+            // Prevent "bystanders" from taking damage by the world border
+            if(event.getCause().equals(EntityDamageEvent.DamageCause.WORLD_BORDER)) {
+                if(team.isEmpty() || !team.get().isPlaying()) {
+                    player.sendActionBar(text().content("You are outside the world border!").color(DLDSColor.RED));
+                    event.setCancelled(true);
+                }
+            }
+
+        }
+    }
+
+    @EventHandler
+    public void onPlayerDropItem(PlayerDropItemEvent event) {
+
+        // Prevent players from dropping items while their countdown is running
+        Optional<DLDSTeam> team = getTeam(event.getPlayer());
+        if(team.isPresent() && team.get().isCountdownRunning()) {
+            event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onJump(PlayerJumpEvent event) {
-        if(players.containsKey(event.getPlayer().getUniqueId()) && isCountdownRunning) {
+
+        // Prevent players from jumping while their countdown is running
+        Optional<DLDSTeam> team = getTeam(event.getPlayer());
+        if(team.isPresent() && team.get().isCountdownRunning()) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        if(players.containsKey(event.getPlayer().getUniqueId()) && isCountdownRunning) {
+
+        // Prevent players from breaking blocks while their countdown is running
+        Optional<DLDSTeam> team = getTeam(event.getPlayer());
+        if(team.isPresent() && team.get().isCountdownRunning()) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onChat(AsyncChatEvent event) {
+        Optional<DLDSTeam> teamOpt = getTeam(event.getPlayer());
+        final Component teamPrefix = teamOpt.map(dldsTeam -> empty()
+                .append(text(dldsTeam.getName(), DLDSColor.LIGHT_BLUE))
+                .append(text(" | ", DARK_GREY))
+        ).orElseGet(Component::empty);
+
         event.renderer(((source, sourceDisplayName, message, viewer) ->
                 Component.empty()
+                        .append(teamPrefix)
                                 .append(sourceDisplayName.style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
                                 .append(text(" > ", DARK_GREY))
                                 .append(message.color(LIGHT_GREY))
@@ -320,34 +324,40 @@ public class GameManager implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        event.joinMessage(DLDSComponents.playerJoinMessage(player));
+        event.joinMessage(DLDSComponents.playerJoinMessage(player, getTeam(player).orElse(null)));
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        PlayerData playerData = players.get(player.getUniqueId());
+        Optional<DLDSTeam> team = getTeam(player);
 
-        // If the player is registered and kicked, check if we need to alter the quit message
-        if(playerData != null && event.getReason().equals(PlayerQuitEvent.QuitReason.KICKED)) {
+        // If the player is in a team that is currently playing and the player is kicked, we might want to change the quit message
+        if(team.isPresent() && team.get().isPlaying() && event.getReason().equals(PlayerQuitEvent.QuitReason.KICKED)) {
 
-            // If the player just ran out of time, send a custom quit message
-            if(plugin.getConfig().getBoolean("timeout_kick")
-                    && (playerData.getRemainingTime() == 0L || playerData.getRemainingTime() == -1L)) {
-                event.quitMessage(DLDSComponents.playerTimeoutQuitMessage(player));
-                return;
-            }
+            // Get playerData associated with the player
+            // Cannot be empty since we are operating on the current team of the player
+            Optional<PlayerData> playerData = team.get().getPlayerData(player);
+            if(playerData.isPresent()) {
 
-            // If the player is dead, do not send a kick message at all (normal death message displayed instead)
-            if(plugin.getConfig().getBoolean("permadeath")
-                    && playerData.isDead()) {
-                event.quitMessage(null);
-                return;
+                // If the player just ran out of time, send a custom quit message
+                if(plugin.getConfig().getBoolean("timeout_kick")
+                        && (playerData.get().getRemainingTime() == 0L || playerData.get().getRemainingTime() == -1L)) {
+                    event.quitMessage(DLDSComponents.playerTimeoutQuitMessage(player, team.get()));
+                    return;
+                }
+
+                // If the player is dead, do not send a kick message at all (normal death message displayed instead)
+                if(plugin.getConfig().getBoolean("permadeath")
+                        && playerData.get().isDead()) {
+                    event.quitMessage(null);
+                    return;
+                }
             }
         }
 
         // Normal quit message
-        event.quitMessage(DLDSComponents.playerQuitMessage(player));
+        event.quitMessage(DLDSComponents.playerQuitMessage(player, team.orElse(null)));
     }
 
     @EventHandler
@@ -356,7 +366,6 @@ public class GameManager implements Listener {
     }
 
     public void handleAdvancement(Player player, Advancement advancement) {
-        PlayerData playerData = players.get(player.getUniqueId());
         NamespacedKey advancementKey = advancement.getKey();
 
         // Ignore recipes
@@ -364,20 +373,22 @@ public class GameManager implements Listener {
             return;
         }
 
-        // Ignore if player is not registered or game has not started yet
-        if(playerData == null || !isGameRunning) {
+        // Check if the player is in a team and if the team is currently playing
+        Optional<DLDSTeam> teamOpt = getTeam(player);
+        if(teamOpt.isEmpty() || !teamOpt.get().isPlaying()) {
             return;
         }
+        DLDSTeam team = teamOpt.get();
 
-        // Check if anyone else has this advancement
-        boolean isFirst = true;
-        for(PlayerData pd : players.values()) {
-            if(pd.getEarnedAdvancements().contains(advancementKey)) {
-                isFirst = false;
-                break;
-            }
+        // Get player data
+        Optional<PlayerData> playerDataOpt = team.getPlayerData(player);
+        if(playerDataOpt.isEmpty()) {
+            return;
         }
+        PlayerData playerData = playerDataOpt.get();
 
+        // Check if anyone else in the players' team has this advancement
+        boolean isFirst = !team.hasAdvancement(advancementKey);
 
         // Read rewards from configuration file
         ConfigurationSection rewardSection = getRewardsSection(advancement);
@@ -387,7 +398,7 @@ public class GameManager implements Listener {
             return;
         }
 
-        // Add advancement to player's list
+        // Add advancement to players' list
         playerData.getEarnedAdvancements().add(advancementKey);
 
         // Give rewards if first
@@ -397,50 +408,25 @@ public class GameManager implements Listener {
             awardItems(player, rewards);
             awardExperience(player, experience);
 
-            broadcastMessageToRegisteredPlayers(DLDSComponents.newAdvancementMessage(player));
+            team.broadcastMessage(DLDSComponents.newAdvancementMessage(player));
         }
 
         player.playNote(player.getLocation(), Instrument.PIANO, Note.natural(1, Note.Tone.A));
 
-        // Send point notification to all registered players
+        // Send point notification to all players in the team
         int points = getAdvancementPoints(rewardSection);
-        broadCastActionBar(Component.text("+" + points + " ").color(DLDSColor.LIGHT_GREEN)
+        team.broadcastActionBar(Component.text("+" + points + " ").color(DLDSColor.LIGHT_GREEN)
                 .append(Component.text(points == 1 ? "Point" : "Points").color(DLDSColor.LIGHT_GREY)));
 
         // Update Scoreboards
         plugin.getScoreboardManager().updateBoards();
     }
 
-    public void broadcastTitleToRegisteredPlayers(Component title, Component subtitle, Title.Times times) {
-        for(Player player : getOnlineRegisteredPlayers()) {
-            player.showTitle(Title.title(title, subtitle, times));
-        }
-    }
-
-    public void broadcastMessageToRegisteredPlayers(Component... components) {
-        for(Player player : getOnlineRegisteredPlayers()) {
-            for(Component component : components) {
-                player.sendMessage(component);
-            }
-        }
-    }
-
-    public List<Player> getOnlineRegisteredPlayers() {
-        LinkedList<Player> res = new LinkedList<>();
-        for(PlayerData playerData : players.values()) {
-            Player player = plugin.getServer().getPlayer(playerData.getUuid());
-            if (player != null && player.isOnline()) {
-                res.add(player);
-            }
-        }
-        return res;
-    }
-
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         Entity entity = event.getEntity();
 
-        // Ignore if entity is not EnderDragon
+        // Ignore if entity is not Ender Dragon
         if(!(entity instanceof EnderDragon)) {
             return;
         }
@@ -526,23 +512,32 @@ public class GameManager implements Listener {
 
     @EventHandler
     public void onPreLogin(AsyncPlayerPreLoginEvent event) {
-        PlayerData playerData = players.get(event.getPlayerProfile().getId());
+        UUID uuid = event.getPlayerProfile().getId();
 
         // Ignore OP player
         if(Bukkit.getServer().getOperators().stream().map(OfflinePlayer::getUniqueId).toList().contains(event.getPlayerProfile().getId())){
             return;
         }
 
-        // Ignore if player is not registered or game is not running
-        if(playerData == null || !isGameRunning) {
+        // Ignore if player is not in a team or the team is not playing
+        Optional<DLDSTeam> teamOpt = getTeam(uuid);
+        if(teamOpt.isEmpty() || !teamOpt.get().isPlaying()) {
             return;
         }
+        DLDSTeam team = teamOpt.get();
 
-        int currentPoints = getCurrentPoints();
-        int maxPoints = getMaxPoints();
+        // Get player data
+        Optional<PlayerData> playerDataOpt = team.getPlayerData(uuid);
+        if(playerDataOpt.isEmpty()) {
+            return;
+        }
+        PlayerData playerData = playerDataOpt.get();
 
-        int currentAdvancements = getCurrentAdvancementAmount();
-        int maxAdvancements = getMaxAdvancementAmount();
+        int currentPoints = team.getCurrentPoints();
+        int maxPoints = team.getAchievablePoints();
+
+        int currentAdvancements = team.getCurrentAdvancementAmount();
+        int maxAdvancements = team.getAchievableAdvancementAmount();
 
         if(playerData.getRemainingTime() <= 0L && plugin.getConfig().getBoolean("timeout_kick")){
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
@@ -558,14 +553,16 @@ public class GameManager implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
-        PlayerData playerData = players.get(player.getUniqueId());
+        Optional<DLDSTeam> teamOpt = getTeam(player);
 
-        event.deathMessage(DLDSComponents.playerDeathMessage(player));
+        event.deathMessage(DLDSComponents.playerDeathMessage(player, teamOpt.orElse(null)));
 
-        // Play thunder sound for all other players
-        for(Player otherplayer : getOnlineRegisteredPlayers()) {
-            if(!otherplayer.getUniqueId().equals(player.getUniqueId())) {
-                otherplayer.playSound(otherplayer.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
+        // Play thunder sound for all other players of the team
+        if(teamOpt.isPresent() && teamOpt.get().isPlaying()) {
+            for(Player otherplayer : teamOpt.get().getOnlinePlayers()) {
+                if(!otherplayer.getUniqueId().equals(player.getUniqueId())) {
+                    otherplayer.playSound(otherplayer.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 1f);
+                }
             }
         }
 
@@ -574,18 +571,21 @@ public class GameManager implements Listener {
             return;
         }
 
-        // Ignore if player is not registered or game is not running
-        if(playerData == null || !isGameRunning) {
+        // Ignore if player is in a team or the team is not playing
+        if(teamOpt.isEmpty() || !teamOpt.get().isPlaying()) {
             return;
         }
+        DLDSTeam team = teamOpt.get();
 
-        int currentPoints = getCurrentPoints();
-        int maxPoints = getMaxPoints();
+        int currentPoints = team.getCurrentPoints();
+        int maxPoints = team.getAchievablePoints();
 
-        int currentAdvancements = getCurrentAdvancementAmount();
-        int maxAdvancements = getMaxAdvancementAmount();
+        int currentAdvancements = team.getCurrentAdvancementAmount();
+        int maxAdvancements = team.getAchievableAdvancementAmount();
 
-        playerData.setDead(true);
+        Optional<PlayerData> playerDataOpt = team.getPlayerData(player);
+        playerDataOpt.ifPresent(playerData -> playerData.setDead(true));
+
         player.kick(
                 DLDSComponents.getPlayerDeathKickMessage(currentPoints, maxPoints, currentAdvancements, maxAdvancements)
         );
@@ -593,19 +593,10 @@ public class GameManager implements Listener {
 
     }
 
-    private void broadCastActionBar(Component component) {
-        for(PlayerData pd : players.values()) {
-            Player player = plugin.getServer().getPlayer(pd.getUuid());
-            if(player != null) {
-                player.sendActionBar(component);
-            }
-        }
-    }
-
-    private void teleportPlayers(Location location) {
+    public void teleportPlayersDistributed(Location location, Collection<Player> players) {
         World overworld = plugin.getServer().getWorlds().getFirst();
 
-        for(Player player : getOnlineRegisteredPlayers()) {
+        for(Player player : players) {
             int deltaX, deltaZ;
             int tries = 0;
             Block highestBlock;
@@ -618,19 +609,19 @@ public class GameManager implements Listener {
 
             // Teleport player to original random position if we could not find a suitable random offset
             if(tries == 5) {
-                player.teleport(location);
+                player.teleport(location.clone().add(0.5, 0, 0.5));
                 player.setRespawnLocation(location, true);
                 continue;
             }
 
             // Teleport player to random offset location
-            Location randomOffsetLoc = highestBlock.getLocation().add(0, 1, 0);
+            Location randomOffsetLoc = highestBlock.getLocation().add(0.5, 1, 0.5);
             player.teleport(randomOffsetLoc);
             player.setRespawnLocation(randomOffsetLoc, true);
         }
     }
 
-    private Location getRandomSpawnLocation(double size) {
+    public Location getRandomSpawnLocation(double size) {
         World overworld = plugin.getServer().getWorlds().getFirst();
 
         Location randomLoc;
@@ -658,7 +649,7 @@ public class GameManager implements Listener {
         return plugin.getRewardConfig().getConfigurationSection(path);
     }
 
-    private ConfigurationSection getRewardsSection(NamespacedKey key) {
+    public ConfigurationSection getRewardsSection(NamespacedKey key) {
         String path = key.getNamespace() + "." + key.getKey().replace('/', '.');
         return plugin.getRewardConfig().getConfigurationSection(path);
     }
@@ -782,57 +773,62 @@ public class GameManager implements Listener {
         player.playNote(player.getLocation(), Instrument.DIDGERIDOO, Note.sharp(0, Note.Tone.F));
     }
 
-    public Set<UUID> getRegisteredUUIDs(){
-        return players.keySet();
-    }
-
-    public Map<UUID, PlayerData> getPlayers() {
-        return players;
-    }
-
-    public boolean isGameRunning() {
-        return isGameRunning;
-    }
-
-    public void setGameRunning(boolean gameRunning) {
-        isGameRunning = gameRunning;
-    }
-
-    public void setPlayers(Map<UUID, PlayerData> players) {
-        this.players = players;
-    }
-
-    public int getCurrentPoints() {
+    private int computeTotalAdvancementPoints() {
         int res = 0;
-        for(PlayerData data : players.values()) {
-            for(NamespacedKey key : data.getEarnedAdvancements()) {
-                res += getAdvancementPoints(getRewardsSection(key));
-            }
-        }
-        return res;
-    }
+        List<String> configKeys = plugin.getRewardConfig().getKeys(true).stream().filter(s -> s.endsWith(".points")).toList();
 
-    public int getMaxPoints() {
-        int res = 0;
-        List<String> configKey = plugin.getRewardConfig().getKeys(true).stream().filter(s -> s.endsWith(".points")).toList();
-
-        for (String key : configKey) {
+        for (String key : configKeys) {
             res += plugin.getRewardConfig().getInt(key);
         }
-        return res * players.size();
-    }
-
-    public int getCurrentAdvancementAmount() {
-        int res = 0;
-        for(PlayerData data : players.values()) {
-            res += data.getEarnedAdvancements().size();
-        }
         return res;
     }
 
-    public int getMaxAdvancementAmount() {
-        //TODO: replace hardcoded value
-        return 118*players.size();
+    public Set<DLDSTeam> getTeams() {
+        return teams;
+    }
+
+    public void setTeams(Set<DLDSTeam> teams) {
+        this.teams = teams;
+    }
+
+    public Optional<DLDSTeam> getTeam(Player player) {
+        return getTeam(player.getUniqueId());
+    }
+
+    public Optional<DLDSTeam> getTeam(UUID uuid) {
+        return teams.stream().filter(team -> team.containsPlayer(uuid)).findFirst();
+    }
+
+    public Optional<DLDSTeam> getTeam(String teamName) {
+        return teams.stream().filter(team -> team.getName().equalsIgnoreCase(teamName)).findFirst();
+    }
+
+    public List<DLDSTeam> getPlayingTeams() {
+        return teams.stream().filter(DLDSTeam::isPlaying).toList();
+    }
+
+    private int computeTotalAdvancementCount() {
+        List<String> configKeys = plugin.getRewardConfig().getKeys(true).stream().filter(s -> s.endsWith(".points")).toList();
+        return configKeys.size();
+    }
+
+    /**
+     * @return true if at least one team is currently playing, otherwise false
+     */
+    public boolean isGameRunning() {
+        return teams.stream().anyMatch(DLDSTeam::isPlaying);
+    }
+
+    public DLDSPlugin getPlugin() {
+        return plugin;
+    }
+
+    public int getTotalAdvancementCount() {
+        return totalAdvancementCount;
+    }
+
+    public int getTotalAdvancementPoints() {
+        return totalAdvancementPoints;
     }
 
     public long getDragonRespawnTime() {
@@ -843,17 +839,32 @@ public class GameManager implements Listener {
         this.dragonRespawnTime = dragonRespawnTime;
     }
 
-    public boolean setTimeForPlayer(Player player, int hours, int minutes, int seconds) {
-        PlayerData playerData = players.get(player.getUniqueId());
+    public Optional<PlayerData> getPlayerData(Player player) {
+        Optional<DLDSTeam> team = getTeam(player);
+        if(team.isEmpty()) {
+            return Optional.empty();
+        }
+        return team.get().getPlayerData(player);
+    }
 
-        if(playerData == null) {
-            // Player not registered
-            return false;
+    public void setTimeForPlayer(Player player, int hours, int minutes, int seconds) {
+        Optional<PlayerData> playerData = getPlayerData(player);
+
+        if(playerData.isEmpty()) {
+            // Player not in any team
+            throw new PlayerNotInTeamException(player, null);
+        }
+
+        Optional<DLDSTeam> team = getTeam(player);
+        if(team.isPresent()) {
+            if(!team.get().isPlaying()) {
+                // Player in team but the team is not playing
+                throw new TeamNotPlayingException(team.get());
+            }
         }
 
         // Set remaining time
         long totalSeconds = (hours * 3600L) + (minutes * 60L) + seconds;
-        playerData.setRemainingTime(totalSeconds);
-        return true;
+        playerData.get().setRemainingTime(totalSeconds);
     }
 }

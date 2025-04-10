@@ -1,9 +1,14 @@
 package eu.bitflare.dlds;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.entity.Player;
+
+import java.util.List;
+import java.util.Set;
 
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.text;
@@ -11,9 +16,21 @@ import static eu.bitflare.dlds.DLDSColor.*;
 
 public class DLDSComponents {
 
+    private static final int CHAT_WIDTH = 53;
+    private static final int PLUGIN_NAME_WIDTH = 17;
+
+
     // Scoreboard
     public static final Component scoreboardHeader = text()
             .content("Unofficial DLDS").style(Style.style(DARK_GREEN, TextDecoration.BOLD)).build();
+
+    public static Component longMessageHeader = empty()
+                .append(text("=".repeat((CHAT_WIDTH - PLUGIN_NAME_WIDTH) / 2) + "[", DARK_GREY))
+                .append(scoreboardHeader)
+                .append(text("]" + "=".repeat((CHAT_WIDTH - PLUGIN_NAME_WIDTH) / 2), DARK_GREY));
+
+
+    public static Component longMessageFooter = text("=".repeat(CHAT_WIDTH), DARK_GREY);
 
     public static Component formatTime(long remainingTime) {
         long hours = remainingTime / 3600;
@@ -39,6 +56,16 @@ public class DLDSComponents {
                 .build();
     }
 
+    // Chat prefix ( [...] teamName | )
+    public static Component chatPrefix(Component prefix, DLDSTeam team) {
+        Component res = chatPrefix(prefix);
+
+        if(team != null) {
+            res = res.append(text(team.getName(), LIGHT_BLUE)).append(text(" | ", DARK_GREY));
+        }
+        return res;
+    }
+
     // New advancement
     public static Component newAdvancementMessage(Player player) {
         return chatPrefix(scoreboardHeader).append(text()
@@ -60,26 +87,26 @@ public class DLDSComponents {
     }
 
     // Leave message
-    public static Component playerQuitMessage(Player player) {
-        return chatPrefix(text("-", RED))
+    public static Component playerQuitMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("-", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
     // Join message
-    public static Component playerJoinMessage(Player player) {
-        return chatPrefix(text("+", LIGHT_GREEN))
+    public static Component playerJoinMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("+", LIGHT_GREEN), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
     // Death message
-    public static Component playerDeathMessage(Player player) {
-        return chatPrefix(text("☠", RED))
+    public static Component playerDeathMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("☠", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
     // Timeout quit message
-    public static Component playerTimeoutQuitMessage(Player player) {
-        return chatPrefix(text("⌛", RED))
+    public static Component playerTimeoutQuitMessage(Player player, DLDSTeam team) {
+        return chatPrefix(text("⌛", RED), team)
                 .append(text(player.getName(), LIGHT_GREY));
     }
 
@@ -95,123 +122,121 @@ public class DLDSComponents {
 
     // help message
     public static Component helpMessage() {
-        final int chatWidth = 53;
-        final int pluginNameWidth = 17;
-
-        Component header = empty()
-                .append(text("=".repeat((chatWidth - pluginNameWidth)/2) + "[", DARK_GREY))
-                .append(scoreboardHeader)
-                .append(text("]" + "=".repeat((chatWidth - pluginNameWidth)/2), DARK_GREY));
-        Component footer = text("=".repeat(chatWidth), DARK_GREY);
-
         return empty()
-                .append(header)
+                .append(longMessageHeader)
                 .appendNewline()
                 .append(text("Commands:", LIGHT_GREY))
                 .appendNewline()
-                .append(renderCommandHelp("dlds enter", 1,
-                        "Enter the event. Must be executed by",
-                        "every player who wishes to participate."))
+                .append(renderCommandHelp("dlds team", 2,
+                        "Manage teams, assign players, ..."))
                 .append(renderCommandHelp("dlds start", 1,
-                        "Start the event once all players entered."))
+                        "Start the event for a given team."))
                 .append(renderCommandHelp("dlds stop", 2,
-                        "Stop the event and reset the scoreboard."))
+                        "Stop the event for a given team."))
                 .append(renderCommandHelp("dlds time", 3,
                         "Set the remaining time of a given player."))
-                .append(footer);
+                .append(renderCommandHelp("dlds leaderboard", 1,
+                        "Show the leaderboard for all teams",
+                        "with assigned players."))
+
+                .append(text("Click ", LIGHT_GREY))
+                .append(text("here")
+                        .style(Style.style(ORANGE, TextDecoration.BOLD))
+                        .clickEvent(ClickEvent.openUrl("https://github.com/JonasDju/DLDS-Unofficial?tab=readme-ov-file#usage"))
+                        .hoverEvent(HoverEvent.showText(text("Click to open tutorial", WHITE)))
+                )
+                .append(text(" to view a tutorial.", LIGHT_GREY))
+                .appendNewline()
+                .append(longMessageFooter);
     }
 
     private static Component renderCommandHelp(String command, int initialOffset, String... descriptionLines) {
         Component res = text("  - ", LIGHT_GREY)
-                .append(text("/"+command, ORANGE))
+                .append(text("/"+command, ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand("/" + command + " "))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE)))
+                )
                 .append(text(": ", LIGHT_GREY));
 
         for(int i = 0; i < descriptionLines.length; i++) {
             if(i > 0) {
-                res = res.append(text(" ".repeat(22)));
+                res = res.append(text(" ".repeat(31)));
             }
             res = res.append(text(" ".repeat(i == 0 ? initialOffset : 0) + descriptionLines[i], LIGHT_GREY)).appendNewline();
         }
         return res;
     }
 
-    // enter -> DLDS already running
-    public static Component registerGameAlradyRunning() {
+    // start -> success
+    public static Component startSuccess(String teamName) {
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("You cannot enter because ", LIGHT_GREY))
-                .append(text("DLDS is already running", RED))
+                .append(text("Successfully started the game for team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
                 .append(text("!", LIGHT_GREY));
     }
 
-    // enter -> already registered
-    public static Component registerAlreadyRegistered() {
+    // start -> help
+    public static Component startHelp() {
+        String command = "/dlds start ";
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("You have ", LIGHT_GREY))
-                .append(text("already entered", RED))
-                .append(text(" the event!", LIGHT_GREY));
+                .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                .append(text(command + "<teamname>", ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand(command))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE))));
     }
 
-    // enter -> success
-    public static Component registerSuccess() {
-        return chatPrefix(scoreboardHeader).append(text()
-                .color(LIGHT_GREY)
-                .content("You have ")
-                .append(text("entered the event", LIGHT_GREEN))
-                .append(text("!", LIGHT_GREY))
-                .build()
-        );
-    }
-
-    // start -> no players
-    public static Component startNoPlayers() {
+    // stop -> help
+    public static Component stopHelp() {
+        String command = "/dlds stop ";
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("No players", RED))
-                .append(text(" have entered yet! Use ", LIGHT_GREY))
-                .append(text("/dlds enter", ORANGE))
-                .append(text(" to enter the game!", LIGHT_GREY));
-    }
-
-    // start -> already running
-    public static Component startAlreadyRunning() {
-        return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("DLDS is", RED))
-                .append(text("already running", RED))
-                .append(text("!", LIGHT_GREY));
-    }
-
-    // stop -> not started
-    public static Component stopNotStarted() {
-        return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("DLDS has ", LIGHT_GREY))
-                .append(text("not started yet", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("Usage: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
+                .append(text(command + "<teamname>", ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand(command))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE))));
     }
 
     // stop -> success
-    public static Component stopSuccess() {
-        return chatPrefix(scoreboardHeader).append(text()
-                .color(LIGHT_GREY)
-                .content("DLDS ")
-                .append(text("has been stopped", LIGHT_GREEN))
-                .append(text("!", LIGHT_GREY))
-                .build()
-        );
+    public static Component stopSuccess(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully stopped the game for team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
     }
 
-    // time -> player not found / registered
-    public static Component timePlayerNotFound(Player player) {
+    // your game was stopped
+    public static Component yourGameWasStopped() {
         return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("The player ", LIGHT_GREY))
-                .append(text(player.getName(), LIGHT_GREEN))
-                .append(text(" is ", LIGHT_GREY))
-                .append(text("not registered", RED))
-                .append(text("!", LIGHT_GREY));
+                .append(text("Your game has been stopped!", LIGHT_GREY));
+    }
+
+    // leaderboard
+    public static Component leaderboard(List<DLDSTeam> teams) {
+        if(teams.isEmpty()) {
+            return chatPrefix(scoreboardHeader)
+                    .append(text("There are currently ", LIGHT_GREY))
+                    .append(text("no teams ", RED))
+                    .append(text("with players assigned!", LIGHT_GREY));
+        }
+
+        Component result = empty()
+                .append(longMessageHeader)
+                .appendNewline()
+                .append(text("Leaderboard:", LIGHT_GREY))
+                .appendNewline();
+
+        int counter = 1;
+        for(DLDSTeam team : teams) {
+            float percentage = 100f * team.getCurrentPoints() / team.getAchievablePoints();
+            result = result
+                    .append(text("  " + " ".repeat(counter < 10 ? 1 : 0), LIGHT_GREY))
+                    .append(text(counter + ". ", LIGHT_GREY))
+                    .append(text(team.getName(), LIGHT_BLUE))
+                    .append(text(" " + team.getCurrentPoints() + "/" + team.getAchievablePoints(), YELLOW))
+                    .append(text(" (" + String.format("%.0f", percentage) + "%)", LIGHT_GREY))
+                    .appendNewline();
+            counter++;
+        }
+        return result.append(longMessageFooter);
     }
 
     // time -> success
@@ -224,6 +249,98 @@ public class DLDSComponents {
                 .append(text(time, YELLOW))
                 .append(text("!", LIGHT_GREY));
     }
+
+    // team -> create -> success
+    public static Component teamCreateSuccess(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully created the team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> remove -> success
+    public static Component teamRemoveSuccess(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully deleted the team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> list
+    public static Component teamList(Set<DLDSTeam> teams) {
+        if(teams.isEmpty()) {
+            return chatPrefix(scoreboardHeader)
+                    .append(text("There are currently ", LIGHT_GREY))
+                    .append(text("no teams", RED))
+                    .append(text("!", LIGHT_GREY));
+        }
+
+        Component result = empty()
+                .append(longMessageHeader)
+                .appendNewline()
+                .append(text("Teams:", LIGHT_GREY))
+                .appendNewline();
+
+        for(DLDSTeam team : teams) {
+            result = result.append(text("  - ", LIGHT_GREY))
+                    .append(text(team.getName(), LIGHT_BLUE))
+                    .append(text(": ", LIGHT_GREY));
+
+            List<String> playerNames = team.getPlayers().stream().map(PlayerData::getPlayerName).toList();
+
+            if(playerNames.isEmpty()) {
+                result = result.append(text("No players!", LIGHT_GREY));
+            } else if (playerNames.size() <= 2) {
+                result = result.append(text(
+                        String.join(", ", playerNames), LIGHT_GREY));
+            } else {
+                for(String playerName : playerNames) {
+                    result = result.appendNewline()
+                            .append(text("    - ", LIGHT_GREY))
+                            .append(text(playerName, LIGHT_GREY));
+                }
+            }
+            result = result.appendNewline();
+        }
+        return result.append(longMessageFooter);
+    }
+
+    // team -> addplayer -> success
+    public static Component teamAddPlayerSuccess(Player player, String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully added player ", LIGHT_GREY))
+                .append(text(player.getName(), LIGHT_GREEN))
+                .append(text(" to team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> addplayer -> you were added
+    public static Component youWereAdded(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("You were added to the team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> removeplayer -> success
+    public static Component teamRemovePlayerSuccess(Player player, String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("Successfully removed player ", LIGHT_GREY))
+                .append(text(player.getName(), LIGHT_GREEN))
+                .append(text(" from team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
+    // team -> removeplayer -> you were removed
+    public static Component youWereRemoved(String teamName) {
+        return chatPrefix(scoreboardHeader)
+                .append(text("You were removed from team ", LIGHT_GREY))
+                .append(text(teamName, LIGHT_BLUE))
+                .append(text("!", LIGHT_GREY));
+    }
+
 
     // Kick messages
     private static Component kickMessagePointsAndAdvancements(int currentPoints, int maxPoints, int currentAdvancements, int maxAdvancements) {
