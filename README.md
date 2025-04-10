@@ -23,7 +23,7 @@ The plugin offers five commands to control and interact with the game:
 
     If this is your first time starting a game of DLDS, you want to use this command to create one or more teams. Use the following sub-commands:
 
-    - `/dlds team create <teamname>`: Creates a team with the given name. The team name must be one word.
+    - `/dlds team create <teamname>`: Creates a team with the given name. The team name must be one word and must not contain special characters.
     - `/dlds team delete <teamname>`: Deletes the team with the given name.
     - `/dlds team addplayer <player> <teamname>`: Adds the given player to the given team. A player can only be in one team at a time.
     - `/dlds team removeplayer <player>`: Removes the given player from its current team.
