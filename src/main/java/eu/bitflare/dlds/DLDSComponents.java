@@ -127,59 +127,44 @@ public class DLDSComponents {
                 .appendNewline()
                 .append(text("Commands:", LIGHT_GREY))
                 .appendNewline()
-                .append(renderCommandHelp("dlds enter", 1,
-                        "Enter the event. Must be executed by",
-                        "every player who wishes to participate."))
+                .append(renderCommandHelp("dlds team", 2,
+                        "Manage teams, assign players, ..."))
                 .append(renderCommandHelp("dlds start", 1,
-                        "Start the event once all players entered."))
+                        "Start the event for a given team."))
                 .append(renderCommandHelp("dlds stop", 2,
-                        "Stop the event and reset the scoreboard."))
+                        "Stop the event for a given team."))
                 .append(renderCommandHelp("dlds time", 3,
                         "Set the remaining time of a given player."))
+                .append(renderCommandHelp("dlds leaderboard", 1,
+                        "Show the leaderboard for all teams",
+                        "with assigned players."))
+
+                .append(text("Click ", LIGHT_GREY))
+                .append(text("here")
+                        .style(Style.style(ORANGE, TextDecoration.BOLD))
+                        .clickEvent(ClickEvent.openUrl("https://github.com/JonasDju/DLDS-Unofficial?tab=readme-ov-file#usage"))
+                        .hoverEvent(HoverEvent.showText(text("Click to open tutorial", WHITE)))
+                )
+                .append(text(" to view a tutorial on how to start the game.", LIGHT_GREY))
+                .appendNewline()
                 .append(longMessageFooter);
     }
 
     private static Component renderCommandHelp(String command, int initialOffset, String... descriptionLines) {
         Component res = text("  - ", LIGHT_GREY)
-                .append(text("/"+command, ORANGE))
+                .append(text("/"+command, ORANGE)
+                        .clickEvent(ClickEvent.suggestCommand("/" + command + " "))
+                        .hoverEvent(HoverEvent.showText(text("Click to copy", WHITE)))
+                )
                 .append(text(": ", LIGHT_GREY));
 
         for(int i = 0; i < descriptionLines.length; i++) {
             if(i > 0) {
-                res = res.append(text(" ".repeat(22)));
+                res = res.append(text(" ".repeat(31)));
             }
             res = res.append(text(" ".repeat(i == 0 ? initialOffset : 0) + descriptionLines[i], LIGHT_GREY)).appendNewline();
         }
         return res;
-    }
-
-    // enter -> DLDS already running
-    public static Component registerGameAlradyRunning() {
-        return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("You cannot enter because ", LIGHT_GREY))
-                .append(text("DLDS is already running", RED))
-                .append(text("!", LIGHT_GREY));
-    }
-
-    // enter -> already registered
-    public static Component registerAlreadyRegistered() {
-        return chatPrefix(scoreboardHeader)
-                .append(text("Error: ").style(Style.style(LIGHT_GREY, TextDecoration.BOLD)))
-                .append(text("You have ", LIGHT_GREY))
-                .append(text("already entered", RED))
-                .append(text(" the event!", LIGHT_GREY));
-    }
-
-    // enter -> success
-    public static Component registerSuccess() {
-        return chatPrefix(scoreboardHeader).append(text()
-                .color(LIGHT_GREY)
-                .content("You have ")
-                .append(text("entered the event", LIGHT_GREEN))
-                .append(text("!", LIGHT_GREY))
-                .build()
-        );
     }
 
     // start -> success
