@@ -59,7 +59,7 @@ He then assigns himself and Dennis to PietSmiet and Jay to Salzmine:
 - `/dlds team addplayer Dennis PietSmiet`
 - `/dlds team addplayer Jay Salzmine`
 
-She now uses `/dlds team list` to confirm that he didn't make any mistakes. To start the game for his own team and Jay, he runs:
+He now uses `/dlds team list` to confirm that he didn't make any mistakes. To start the game for his own team and Jay, he runs:
 
 - `/dlds start PietSmiet`
 - `/dlds start Salzmine`
