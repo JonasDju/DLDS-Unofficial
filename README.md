@@ -5,7 +5,7 @@ The goal is to get the most amount of points within 12 hours without dying.
 The first player in a team to complete an advancement is also given a reward, which differs for each advancement. The type of reward is determined by the difficulty of the advancement. You can learn more about DLDS [here](https://www.pietsmiet.live) (in german).
 
 ## Features
-The plugin currently contains all of the core mechanics of the event:
+The plugin currently contains all the core mechanics of the event:
 - Automatic tracking of advancements and points
 - Automatic rewarding of the first team member who gains an advancement
 - Playing alone or with any number of friends (the point cap adjusts automatically)
